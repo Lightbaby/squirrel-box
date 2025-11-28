@@ -533,32 +533,79 @@ async function publishTweetToTwitter(content: string) {
             editableDiv.focus();
         }
 
-        // 使用 document.execCommand 模拟用户输入（最兼容 React 状态）
-        // 先选中所有内容（如果有的话）
-        document.execCommand('selectAll', false);
+        // 清空现有内容
+        const selection = window.getSelection();
+        if (selection) {
+            selection.removeAllRanges();
+        }
         
-        // 逐字符/逐段落输入以触发 React 状态更新
+        // 将光标移到编辑器开头
+        if (editableDiv instanceof HTMLElement) {
+            const range = document.createRange();
+            range.selectNodeContents(editableDiv);
+            range.collapse(true); // collapse to start
+            selection?.addRange(range);
+        }
+
+        // 逐行插入文本
         const lines = content.split('\n');
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             
-            // 插入文本
+            // 插入文本（即使是空行也处理换行）
             if (line) {
-                document.execCommand('insertText', false, line);
+                // 尝试 insertText
+                const success = document.execCommand('insertText', false, line);
+                if (!success) {
+                    // 备选：使用 InputEvent
+                    editableDiv.dispatchEvent(new InputEvent('beforeinput', {
+                        inputType: 'insertText',
+                        data: line,
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                }
             }
             
             // 插入换行（除了最后一行）
             if (i < lines.length - 1) {
-                // 使用 insertParagraph 或 insertLineBreak
-                const success = document.execCommand('insertParagraph', false);
+                // 模拟按下 Enter 键
+                editableDiv.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true
+                }));
+                
+                // 使用 insertParagraph
+                let success = document.execCommand('insertParagraph', false);
                 if (!success) {
-                    document.execCommand('insertLineBreak', false);
+                    success = document.execCommand('insertLineBreak', false);
                 }
+                if (!success) {
+                    // 尝试 InputEvent
+                    editableDiv.dispatchEvent(new InputEvent('beforeinput', {
+                        inputType: 'insertParagraph',
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                }
+                
+                editableDiv.dispatchEvent(new KeyboardEvent('keyup', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true
+                }));
             }
             
             // 给 React 一点时间处理
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => setTimeout(resolve, 20));
         }
 
         // 触发 input 和 change 事件确保 React 检测到变化
