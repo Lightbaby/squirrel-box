@@ -516,9 +516,15 @@ export default function SidePanel() {
                                         {/* Card Header */}
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm truncate">
+                                                <a
+                                                    href={getProfileUrl(tweet)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm truncate hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                                                >
                                                     {tweet.author}
-                                                </span>
+                                                </a>
                                                 {/* Removed Handle */}
                                                 <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full font-medium shrink-0">
                                                     {getPlatformName(tweet.platform)}
