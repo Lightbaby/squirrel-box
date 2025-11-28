@@ -1,9 +1,12 @@
 import { Tweet, Settings } from './types';
 
+export type Theme = 'system' | 'light' | 'dark';
+
 const STORAGE_KEYS = {
     TWEETS: 'tweets',
     SETTINGS: 'settings',
     READING_MODE: 'readingMode',
+    THEME: 'theme',
 };
 
 export const storage = {
@@ -49,5 +52,14 @@ export const storage = {
 
     async setReadingMode(enabled: boolean): Promise<void> {
         await chrome.storage.local.set({ [STORAGE_KEYS.READING_MODE]: enabled });
+    },
+
+    async getTheme(): Promise<Theme> {
+        const result = await chrome.storage.local.get(STORAGE_KEYS.THEME);
+        return (result[STORAGE_KEYS.THEME] as Theme) || 'system';
+    },
+
+    async setTheme(theme: Theme): Promise<void> {
+        await chrome.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
     },
 };
