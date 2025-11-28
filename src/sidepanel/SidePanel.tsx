@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, PenTool, Trash2, Copy, Sparkles, Loader2, ExternalLink, Send, Tag, Settings as SettingsIcon, Download, MousePointer2 } from 'lucide-react';
+import { BookOpen, PenTool, Trash2, Copy, Sparkles, Loader2, ExternalLink, Send, Tag, Settings as SettingsIcon, Download, MousePointer2, AlertTriangle, X } from 'lucide-react';
 import { storage } from '../lib/storage';
 import { Tweet, Settings, CreationRequest } from '../lib/types';
 import { generateTweet } from '../lib/ai';
@@ -22,6 +22,13 @@ export default function SidePanel() {
     const [generating, setGenerating] = useState(false);
     const [generatedVersions, setGeneratedVersions] = useState<string[]>([]);
     const [publishing, setPublishing] = useState(false);
+    
+    // 删除确认弹窗状态
+    const [deleteConfirm, setDeleteConfirm] = useState<{
+        show: boolean;
+        tweetId: string;
+        authorName: string;
+    }>({ show: false, tweetId: '', authorName: '' });
 
     useEffect(() => {
         loadData();
@@ -46,20 +53,29 @@ export default function SidePanel() {
         }
     }
 
-    async function handleDelete(tweetId: string, authorName?: string) {
-        const confirmMessage = authorName 
-            ? `确定要删除 ${authorName} 的这条收藏吗？` 
-            : '确定要删除这条收藏吗？';
-        
-        if (!window.confirm(confirmMessage)) {
-            return;
-        }
-        
+    // 显示删除确认弹窗
+    function showDeleteConfirm(tweetId: string, authorName?: string) {
+        setDeleteConfirm({
+            show: true,
+            tweetId,
+            authorName: authorName || '未知作者'
+        });
+    }
+
+    // 确认删除
+    async function confirmDelete() {
+        const { tweetId } = deleteConfirm;
         await storage.deleteTweet(tweetId);
         setTweets(tweets.filter(t => t.id !== tweetId));
         selectedTweets.delete(tweetId);
         setSelectedTweets(new Set(selectedTweets));
+        setDeleteConfirm({ show: false, tweetId: '', authorName: '' });
         showNotification('已删除');
+    }
+
+    // 取消删除
+    function cancelDelete() {
+        setDeleteConfirm({ show: false, tweetId: '', authorName: '' });
     }
 
     function toggleSelect(tweetId: string) {
@@ -555,7 +571,7 @@ export default function SidePanel() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleDelete(tweet.id, tweet.author);
+                                                            showDeleteConfirm(tweet.id, tweet.author);
                                                         }}
                                                         className="text-gray-600 hover:text-red-400 transition-colors"
                                                         title="删除"
@@ -706,6 +722,53 @@ export default function SidePanel() {
                     </div>
                 )}
             </div>
+
+            {/* 删除确认弹窗 */}
+            {deleteConfirm.show && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 shadow-2xl max-w-sm w-full overflow-hidden">
+                        {/* 弹窗头部 */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                            <div className="flex items-center gap-2 text-red-400">
+                                <AlertTriangle className="w-5 h-5" />
+                                <span className="font-medium">确认删除</span>
+                            </div>
+                            <button
+                                onClick={cancelDelete}
+                                className="p-1 text-gray-500 hover:text-gray-300 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        
+                        {/* 弹窗内容 */}
+                        <div className="px-4 py-4">
+                            <p className="text-gray-300 text-sm">
+                                确定要删除 <span className="text-white font-medium">{deleteConfirm.authorName}</span> 的这条收藏吗？
+                            </p>
+                            <p className="text-gray-500 text-xs mt-2">
+                                此操作无法撤销
+                            </p>
+                        </div>
+                        
+                        {/* 弹窗按钮 */}
+                        <div className="flex gap-2 px-4 py-3 border-t border-gray-800 bg-[#141414]">
+                            <button
+                                onClick={cancelDelete}
+                                className="flex-1 px-4 py-2 text-sm text-gray-300 bg-[#242424] rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
