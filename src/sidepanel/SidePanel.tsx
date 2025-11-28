@@ -555,6 +555,33 @@ export default function SidePanel() {
                                         {/* Card Header */}
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="flex items-center gap-2 min-w-0">
+                                                {/* 头像 */}
+                                                <a
+                                                    href={getProfileUrl(tweet)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="shrink-0"
+                                                >
+                                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center overflow-hidden">
+                                                        {tweet.platform === 'twitter' && tweet.authorHandle ? (
+                                                            <img 
+                                                                src={`https://unavatar.io/twitter/${tweet.authorHandle}`}
+                                                                alt={tweet.author}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.currentTarget.style.display = 'none';
+                                                                    e.currentTarget.parentElement!.innerHTML = `<span class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">${tweet.author?.charAt(0)?.toUpperCase() || '?'}</span>`;
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                                                                {tweet.author?.charAt(0)?.toUpperCase() || '?'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </a>
+                                                {/* 作者名 */}
                                                 <a
                                                     href={getProfileUrl(tweet)}
                                                     target="_blank"
@@ -564,7 +591,7 @@ export default function SidePanel() {
                                                 >
                                                     {tweet.author}
                                                 </a>
-                                                {/* Removed Handle */}
+                                                {/* 平台标签 */}
                                                 <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full font-medium shrink-0">
                                                     {getPlatformName(tweet.platform)}
                                                 </span>
