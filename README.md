@@ -44,8 +44,8 @@
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/yourusername/creator-plugin.git
-   cd creator-plugin
+   git clone https://github.com/Lightbaby/squirrel-box.git
+   cd squirrel-box
    ```
 
 2. **安装依赖**
@@ -143,9 +143,6 @@ npm run lint
 |------|------|
 | `storage` | 保存收藏内容和设置 |
 | `sidePanel` | 显示收藏库和创作面板 |
-| `activeTab` | 在当前页面注入收藏功能 |
-| `scripting` | 添加收藏按钮 |
-| `host_permissions` | 仅限 Twitter/X 和小红书域名 |
 
 ## 🌟 支持的 AI 服务
 
@@ -197,9 +194,9 @@ MIT License - 你可以自由使用、修改和分发。
 
 ## 💬 反馈
 
-- 🐛 [提交 Bug](https://github.com/yourusername/creator-plugin/issues)
-- 💡 [功能建议](https://github.com/yourusername/creator-plugin/issues)
-- ⭐ 觉得有用？给个 Star 支持一下！
+- 🐛 [提交 Bug](https://github.com/Lightbaby/squirrel-box/issues)
+- 💡 [功能建议](https://github.com/Lightbaby/squirrel-box/issues)
+- ⭐ 觉得有用？给个 [Star](https://github.com/Lightbaby/squirrel-box) 支持一下！
 
 ---
 
