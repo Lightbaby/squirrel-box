@@ -515,15 +515,6 @@ export default function SidePanel() {
                                                 >
                                                     {tweet.author}
                                                 </a>
-                                                <a
-                                                    href={getProfileUrl(tweet)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="text-gray-500 dark:text-gray-500 text-xs hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                                >
-                                                    @{tweet.authorHandle}
-                                                </a>
                                                 {tweet.platform && (
                                                     <span className="text-xs bg-gray-100 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
                                                         {getPlatformName(tweet.platform)}
