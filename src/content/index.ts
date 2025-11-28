@@ -258,6 +258,15 @@ async function collectTweet(tweetElement: Element) {
         }
         console.log('提取到的 authorHandle:', authorHandle);
 
+        // 提取作者头像
+        let authorAvatar = '';
+        const avatarImg = tweetElement.querySelector('img[src*="profile_images"]') as HTMLImageElement;
+        if (avatarImg?.src) {
+            // 使用原图尺寸（移除 _normal 等后缀）
+            authorAvatar = avatarImg.src.replace(/_normal\.(jpg|jpeg|png|gif|webp)$/i, '.$1');
+        }
+        console.log('提取到的作者头像:', authorAvatar ? '有' : '无');
+
         // Extract stats
         const likeButton = tweetElement.querySelector('[data-testid="like"]');
         const retweetButton = tweetElement.querySelector('[data-testid="retweet"]');
@@ -295,6 +304,7 @@ async function collectTweet(tweetElement: Element) {
             tweetUrl,
             author: authorName,
             authorHandle,
+            authorAvatar: authorAvatar || undefined,
             content,
             platform: 'twitter',
             keywords: [],

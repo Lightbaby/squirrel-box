@@ -564,7 +564,18 @@ export default function SidePanel() {
                                                     className="shrink-0"
                                                 >
                                                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center overflow-hidden">
-                                                        {tweet.platform === 'twitter' && tweet.authorHandle ? (
+                                                        {/* 优先使用存储的头像，其次用 unavatar，最后用首字母 */}
+                                                        {tweet.authorAvatar ? (
+                                                            <img 
+                                                                src={tweet.authorAvatar}
+                                                                alt={tweet.author}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.currentTarget.style.display = 'none';
+                                                                    e.currentTarget.parentElement!.innerHTML = `<span class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">${tweet.author?.charAt(0)?.toUpperCase() || '?'}</span>`;
+                                                                }}
+                                                            />
+                                                        ) : tweet.platform === 'twitter' && tweet.authorHandle ? (
                                                             <img 
                                                                 src={`https://unavatar.io/twitter/${tweet.authorHandle}`}
                                                                 alt={tweet.author}

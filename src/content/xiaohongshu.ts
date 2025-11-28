@@ -233,6 +233,23 @@ async function collectNote(noteElement: Element) {
             authorUserId = userIdMatch ? userIdMatch[1] : '';
         }
 
+        // 提取作者头像
+        let authorAvatar = '';
+        const avatarSelectors = [
+            '.author-avatar img',
+            '.avatar img',
+            '[class*="avatar"] img',
+            'a[href*="/user/profile/"] img',
+        ];
+        for (const selector of avatarSelectors) {
+            const avatarImg = noteElement.querySelector(selector) as HTMLImageElement;
+            if (avatarImg?.src && avatarImg.src.includes('sns-avatar')) {
+                authorAvatar = avatarImg.src;
+                break;
+            }
+        }
+        console.log('提取到的作者头像:', authorAvatar ? '有' : '无');
+
         // 提取笔记URL并清理
         const linkElement = noteElement.querySelector('a[href*="/explore/"]');
         let noteUrl = linkElement ? new URL(linkElement.getAttribute('href') || '', window.location.origin).href : window.location.href;
@@ -277,6 +294,7 @@ async function collectNote(noteElement: Element) {
             author: authorName,
             authorHandle: authorUserId || authorName.toLowerCase().replace(/\s+/g, '_'),
             authorProfileUrl: authorProfileUrl || undefined,
+            authorAvatar: authorAvatar || undefined,
             content: fullContent,
             platform: 'xiaohongshu',
             keywords: [],
