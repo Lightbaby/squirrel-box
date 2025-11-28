@@ -188,7 +188,7 @@ export default function Options() {
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-semibold text-white">自定义摘要提示词</h2>
                             <button
-                                onClick={() => setSettings({ ...settings, customSummaryPrompt: DEFAULT_SUMMARY_PROMPT })}
+                                onClick={() => setSettings({ ...settings, customSummaryPrompt: defaultSummaryRules })}
                                 className="px-3 py-1.5 text-xs bg-[#1a1a1a] text-gray-400 rounded-lg hover:bg-[#242424] hover:text-white transition-colors border border-gray-800"
                             >
                                 恢复默认
