@@ -202,6 +202,19 @@ export default function SidePanel() {
         return map[platform || ''] || platform;
     };
 
+    // 获取用户主页链接
+    const getProfileUrl = (platform?: string, handle?: string) => {
+        if (!handle) return '#';
+        switch (platform) {
+            case 'twitter':
+                return `https://x.com/${handle}`;
+            case 'xiaohongshu':
+                return `https://www.xiaohongshu.com/user/profile/${handle}`;
+            default:
+                return '#';
+        }
+    };
+
     // 导出功能
     function exportAsJSON() {
         const dataStr = JSON.stringify(filteredTweets, null, 2);
@@ -441,8 +454,24 @@ export default function SidePanel() {
                                         <div className="flex-1 min-w-0 space-y-3">
                                             {/* 头部信息 */}
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="font-medium text-white text-sm">{tweet.author}</span>
-                                                <span className="text-gray-500 text-xs">@{tweet.authorHandle}</span>
+                                                <a
+                                                    href={getProfileUrl(tweet.platform, tweet.authorHandle)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="font-medium text-white text-sm hover:text-blue-400 hover:underline transition-colors"
+                                                >
+                                                    {tweet.author}
+                                                </a>
+                                                <a
+                                                    href={getProfileUrl(tweet.platform, tweet.authorHandle)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="text-gray-500 text-xs hover:text-blue-400 transition-colors"
+                                                >
+                                                    @{tweet.authorHandle}
+                                                </a>
                                                 {tweet.platform && (
                                                     <span className="text-xs bg-gray-800/50 text-gray-400 px-2 py-0.5 rounded-full">
                                                         {getPlatformName(tweet.platform)}
