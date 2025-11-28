@@ -167,6 +167,36 @@ ${content}
     }
 }
 
+// 默认创作规则
+export const defaultCreationRules = `你是一位专业的社交媒体内容创作者，专注于 Twitter/X 平台。
+
+**Twitter 排版规则**：
+1. 使用空行分段，让内容更易读
+2. 重要观点单独成段
+3. 适当使用 emoji 增加表现力（但不要过度）
+4. 列表项用换行分隔，可用数字或 emoji 作为列表标记
+5. 长文需要分成多个段落，每段聚焦一个要点
+6. 开头要有吸引力，结尾可以有 call-to-action
+
+**内容要求**：
+1. 观点清晰，表达有力
+2. 避免空洞的套话
+3. 如有数据或案例，要具体
+4. 保持真实感和个人风格
+5. 适当引发讨论或互动
+
+**格式示例**：
+🔥 开头抓住注意力
+
+核心观点第一段
+解释或展开
+
+要点一
+要点二
+要点三
+
+总结或 call-to-action`;
+
 export async function generateTweet(
     settings: Settings,
     request: CreationRequest,
@@ -188,27 +218,39 @@ export async function generateTweet(
     };
 
     const lengthMap = {
-        short: '短推（<140字）',
-        standard: '标准（140-280字）',
-        long: '长文（需要分段，每段不超过280字）',
+        short: '短推（<140字，1-2段）',
+        standard: '标准（140-280字，2-4段）',
+        long: '长文（需要分段，每段不超过280字，可以有5-8段）',
     };
 
-    let prompt = `请基于以下要求创作推文：
+    // 使用自定义创作规则或默认规则
+    const creationRules = settings.customCreationPrompt || defaultCreationRules;
 
-主题：${request.topic}
-语言：${languageMap[request.language]}
-风格：${toneMap[request.tone]}
-长度：${lengthMap[request.length]}
+    let prompt = `${creationRules}
+
+---
+
+请基于以下要求创作推文：
+
+**主题**：${request.topic}
+**语言**：${languageMap[request.language]}
+**风格**：${toneMap[request.tone]}
+**长度**：${lengthMap[request.length]}
 `;
 
     if (referenceTweets.length > 0) {
-        prompt += '\n参考素材：\n';
+        prompt += '\n**参考素材**：\n';
         referenceTweets.forEach((tweet, idx) => {
             prompt += `${idx + 1}. ${tweet.summary || tweet.content}\n`;
         });
     }
 
-    prompt += '\n请生成3个不同版本的推文，每个版本用 --- 分隔。';
+    prompt += `
+---
+
+请生成3个不同版本的推文，每个版本风格略有不同。
+**重要**：每个版本之间用 --- 分隔，直接输出推文内容，不要加"版本1"等标签。
+确保排版清晰，适合直接发布到 Twitter。`;
 
     const result = await callAI(settings, [
         { role: 'user', content: prompt }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { storage } from '../lib/storage';
 import { Settings } from '../lib/types';
-import { callAI, defaultSummaryRules } from '../lib/ai';
+import { callAI, defaultSummaryRules, defaultCreationRules } from '../lib/ai';
 
 export default function Options() {
     const [settings, setSettings] = useState<Settings>({
@@ -15,6 +15,8 @@ export default function Options() {
     const [saved, setSaved] = useState(false);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+    const [expandSummaryPrompt, setExpandSummaryPrompt] = useState(false);
+    const [expandCreationPrompt, setExpandCreationPrompt] = useState(false);
 
     useEffect(() => {
         loadSettings();
@@ -57,12 +59,15 @@ export default function Options() {
             <div className="max-w-3xl mx-auto p-6">
                 {/* Header */}
                 <div className="mb-6 flex items-center gap-3">
-                    <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="100" height="100" rx="22" fill="#14171A" />
-                        <path d="M62 15L32 48H48L38 85L70 48H56L62 15Z" fill="white" />
-                    </svg>
+                    <img 
+                        src="/icons/logo.png" 
+                        alt="Logo" 
+                        width="36" 
+                        height="36" 
+                        className="rounded-lg"
+                    />
                     <div>
-                        <h1 className="text-2xl font-bold text-white">设置</h1>
+                        <h1 className="text-2xl font-bold text-white">松鼠收藏夹 · 设置</h1>
                         <p className="text-sm text-gray-400 mt-1">配置 AI 模型和偏好设置</p>
                     </div>
                 </div>
@@ -202,31 +207,92 @@ export default function Options() {
                         </div>
                     </div>
 
-                    {/* Custom Summary Prompt */}
+                    {/* Custom Summary Prompt - Collapsible */}
                     <div className="pt-4 border-t border-gray-800">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-white">自定义摘要提示词</h2>
-                            <button
-                                onClick={() => setSettings({ ...settings, customSummaryPrompt: defaultSummaryRules })}
-                                className="px-3 py-1.5 text-xs bg-[#1a1a1a] text-gray-400 rounded-lg hover:bg-[#242424] hover:text-white transition-colors border border-gray-800"
-                            >
-                                恢复默认
-                            </button>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                摘要规则
-                            </label>
-                            <textarea
-                                value={settings.customSummaryPrompt ?? defaultSummaryRules}
-                                onChange={(e) => setSettings({ ...settings, customSummaryPrompt: e.target.value })}
-                                rows={16}
-                                className="w-full px-3 py-2 bg-[#0a0a0a] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-mono resize-y"
-                            />
-                            <p className="text-xs text-gray-500 mt-1.5">
-                                自定义内容分析规则，格式要求（JSON输出）会自动添加。
-                            </p>
-                        </div>
+                        <button
+                            onClick={() => setExpandSummaryPrompt(!expandSummaryPrompt)}
+                            className="w-full flex items-center justify-between py-2 text-left group"
+                        >
+                            <div className="flex items-center gap-2">
+                                {expandSummaryPrompt ? (
+                                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                                )}
+                                <h2 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                    自定义摘要提示词
+                                </h2>
+                            </div>
+                            <span className="text-xs text-gray-600">
+                                {settings.customSummaryPrompt ? '已自定义' : '使用默认'}
+                            </span>
+                        </button>
+                        
+                        {expandSummaryPrompt && (
+                            <div className="mt-3 space-y-3">
+                                <div className="flex items-center justify-end">
+                                    <button
+                                        onClick={() => setSettings({ ...settings, customSummaryPrompt: defaultSummaryRules })}
+                                        className="px-3 py-1.5 text-xs bg-[#1a1a1a] text-gray-400 rounded-lg hover:bg-[#242424] hover:text-white transition-colors border border-gray-800"
+                                    >
+                                        恢复默认
+                                    </button>
+                                </div>
+                                <textarea
+                                    value={settings.customSummaryPrompt ?? defaultSummaryRules}
+                                    onChange={(e) => setSettings({ ...settings, customSummaryPrompt: e.target.value })}
+                                    rows={12}
+                                    className="w-full px-3 py-2 bg-[#0a0a0a] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-mono resize-y"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    自定义内容分析规则，用于 AI 摘要和分类。格式要求（JSON输出）会自动添加。
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Custom Creation Prompt - Collapsible */}
+                    <div className="pt-4 border-t border-gray-800">
+                        <button
+                            onClick={() => setExpandCreationPrompt(!expandCreationPrompt)}
+                            className="w-full flex items-center justify-between py-2 text-left group"
+                        >
+                            <div className="flex items-center gap-2">
+                                {expandCreationPrompt ? (
+                                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                                )}
+                                <h2 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                    自定义创作提示词
+                                </h2>
+                            </div>
+                            <span className="text-xs text-gray-600">
+                                {settings.customCreationPrompt ? '已自定义' : '使用默认'}
+                            </span>
+                        </button>
+                        
+                        {expandCreationPrompt && (
+                            <div className="mt-3 space-y-3">
+                                <div className="flex items-center justify-end">
+                                    <button
+                                        onClick={() => setSettings({ ...settings, customCreationPrompt: defaultCreationRules })}
+                                        className="px-3 py-1.5 text-xs bg-[#1a1a1a] text-gray-400 rounded-lg hover:bg-[#242424] hover:text-white transition-colors border border-gray-800"
+                                    >
+                                        恢复默认
+                                    </button>
+                                </div>
+                                <textarea
+                                    value={settings.customCreationPrompt ?? defaultCreationRules}
+                                    onChange={(e) => setSettings({ ...settings, customCreationPrompt: e.target.value })}
+                                    rows={12}
+                                    className="w-full px-3 py-2 bg-[#0a0a0a] border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-mono resize-y"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    自定义推文创作规则，包括 Twitter 排版格式、风格要求等。
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Save Button */}
