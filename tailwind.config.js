@@ -10,8 +10,18 @@ export default {
       colors: {
         // Optional: Add semantic colors if we want to clean up the hardcoded values later
         // But for now we'll stick to dark: modifiers
-      }
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            fontSize: '0.875rem',
+            lineHeight: '1.5',
+          },
+        },
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

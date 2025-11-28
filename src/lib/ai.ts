@@ -107,12 +107,20 @@ export async function recognizeImage(settings: Settings, imageUrl: string): Prom
 }
 
 // 默认摘要规则 - 导出以便在设置页面使用
-export const defaultSummaryRules = `1. **核心摘要**：
+export const defaultSummaryRules = `1. **核心摘要**（使用 Markdown 格式输出，提高可读性）：
    - 保留原文的核心论点和关键细节，不限制字数
    - 如果有具体的方法、步骤、规则，必须完整保留
    - 保留数据、示例、对比等重要信息
    - 保持原文的逻辑结构和重点层次
    - 根据内容复杂度决定摘要长度，宁可详细也不要丢失重点
+
+   **Markdown 格式要求**：
+   - 使用 **加粗** 突出关键概念和重要观点
+   - 多个要点时使用列表（- 或 1. 2. 3.）
+   - 有层次的内容可以用分段
+   - 简短内容（<50字）可以不用 Markdown
+   - 不要使用标题语法（#），保持内容紧凑
+   - 代码或命令用 \`反引号\` 包裹
 
    特别注意：
    - 如果原文包含具体的操作指令、提示词、配置项等，必须完整保留

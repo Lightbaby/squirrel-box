@@ -4,6 +4,7 @@ import {
     Send, Settings as SettingsIcon, Download, MousePointer2, 
     AlertTriangle, Sun, Moon, Monitor, ChevronDown, Filter
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { storage, Theme } from '../lib/storage';
 import { Tweet, Settings, CreationRequest } from '../lib/types';
 import { generateTweet } from '../lib/ai';
@@ -537,19 +538,26 @@ export default function SidePanel() {
                                         <div className="mb-3">
                                             {tweet.summary ? (
                                                 <div className="relative">
-                                                    <p className={cn(
-                                                        "text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed",
-                                                        !expandedTweets.has(tweet.id) && "line-clamp-3"
+                                                    <div className={cn(
+                                                        "prose prose-sm dark:prose-invert prose-zinc max-w-none",
+                                                        "prose-p:my-1.5 prose-p:leading-relaxed",
+                                                        "prose-ul:my-1.5 prose-ul:pl-4 prose-li:my-0.5",
+                                                        "prose-ol:my-1.5 prose-ol:pl-4",
+                                                        "prose-strong:text-zinc-800 dark:prose-strong:text-zinc-200",
+                                                        "prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none",
+                                                        !expandedTweets.has(tweet.id) && "line-clamp-4"
                                                     )}>
-                                                        {tweet.summary}
-                                                    </p>
+                                                        <ReactMarkdown>
+                                                            {tweet.summary}
+                                                        </ReactMarkdown>
+                                                    </div>
                                                     {tweet.summary.length > 120 && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 toggleExpanded(tweet.id);
                                                             }}
-                                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 font-medium"
+                                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1.5 font-medium"
                                                         >
                                                             {expandedTweets.has(tweet.id) ? '收起' : '展开全文'}
                                                         </button>
