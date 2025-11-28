@@ -327,12 +327,22 @@ async function collectTweet(tweetElement: Element) {
 
                 // 如果启用了图片识别且有图片，先识别图片内容
                 if (settings.enableImageRecognition && media.length > 0) {
-                    console.log('图片识别已启用，开始识别图片内容...');
+                    console.log(`图片识别已启用，共 ${media.length} 张图片，开始识别...`);
                     try {
+                        // 最多识别 4 张图片（Twitter 单条推文上限）
+                        const imagesToRecognize = media.slice(0, 4);
                         const imageTexts = await Promise.all(
-                            media.slice(0, 3).map(url => recognizeImage(settings, url))
+                            imagesToRecognize.map((url, idx) => 
+                                recognizeImage(settings, url).then(text => {
+                                    console.log(`图片 ${idx + 1}/${imagesToRecognize.length} 识别完成`);
+                                    return text;
+                                }).catch(err => {
+                                    console.warn(`图片 ${idx + 1} 识别失败:`, err);
+                                    return '';
+                                })
+                            )
                         );
-                        const recognizedText = imageTexts.filter(t => t).join('\n\n');
+                        const recognizedText = imageTexts.filter(t => t).join('\n\n---\n\n');
                         if (recognizedText) {
                             contentToAnalyze = `${contentToAnalyze}\n\n【图片内容】\n${recognizedText}`;
                             console.log('图片识别完成，识别出文字:', recognizedText.slice(0, 100));

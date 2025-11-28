@@ -4,6 +4,7 @@ export interface Tweet {
     tweetUrl: string; // 推文链接
     author: string;
     authorHandle: string;
+    authorProfileUrl?: string; // 作者个人主页链接
     content: string;
     summary?: string;
     category?: string; // 分类：技术/产品/营销/生活/其他

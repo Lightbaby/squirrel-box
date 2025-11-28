@@ -265,13 +265,18 @@ export default function SidePanel() {
     };
 
     // 获取用户主页链接
-    const getProfileUrl = (platform?: string, handle?: string) => {
-        if (!handle) return '#';
-        switch (platform) {
+    const getProfileUrl = (tweet: Tweet) => {
+        // 优先使用直接保存的用户主页链接
+        if (tweet.authorProfileUrl) {
+            return tweet.authorProfileUrl;
+        }
+        // 回退到根据平台和 handle 构建链接
+        if (!tweet.authorHandle) return '#';
+        switch (tweet.platform) {
             case 'twitter':
-                return `https://x.com/${handle}`;
+                return `https://x.com/${tweet.authorHandle}`;
             case 'xiaohongshu':
-                return `https://www.xiaohongshu.com/user/profile/${handle}`;
+                return `https://www.xiaohongshu.com/user/profile/${tweet.authorHandle}`;
             default:
                 return '#';
         }
@@ -502,7 +507,7 @@ export default function SidePanel() {
                                             {/* 头部信息 */}
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <a
-                                                    href={getProfileUrl(tweet.platform, tweet.authorHandle)}
+                                                    href={getProfileUrl(tweet)}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     onClick={(e) => e.stopPropagation()}
@@ -511,7 +516,7 @@ export default function SidePanel() {
                                                     {tweet.author}
                                                 </a>
                                                 <a
-                                                    href={getProfileUrl(tweet.platform, tweet.authorHandle)}
+                                                    href={getProfileUrl(tweet)}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     onClick={(e) => e.stopPropagation()}

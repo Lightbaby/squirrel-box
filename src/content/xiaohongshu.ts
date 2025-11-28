@@ -215,6 +215,18 @@ async function collectNote(noteElement: Element) {
             .replace(/\s*关注\s*$/, '') // 移除结尾的空格+关注
             .trim();
 
+        // 提取作者主页链接
+        const authorLinkElement = noteElement.querySelector('a[href*="/user/profile/"]');
+        let authorProfileUrl = '';
+        let authorUserId = '';
+        if (authorLinkElement) {
+            const href = authorLinkElement.getAttribute('href') || '';
+            authorProfileUrl = href.startsWith('http') ? href : `https://www.xiaohongshu.com${href}`;
+            // 提取用户 ID
+            const userIdMatch = authorProfileUrl.match(/\/user\/profile\/([a-zA-Z0-9]+)/);
+            authorUserId = userIdMatch ? userIdMatch[1] : '';
+        }
+
         // 提取笔记URL并清理
         const linkElement = noteElement.querySelector('a[href*="/explore/"]');
         let noteUrl = linkElement ? new URL(linkElement.getAttribute('href') || '', window.location.origin).href : window.location.href;
@@ -222,18 +234,32 @@ async function collectNote(noteElement: Element) {
         // 清理 URL，只保留基础路径，移除可能过期的 token 参数
         noteUrl = cleanNoteUrl(noteUrl);
 
-        // 提取图片
+        // 提取图片（去重 + 过滤无关图片）
         const imageElements = noteElement.querySelectorAll('img[src]');
-        const media = Array.from(imageElements)
+        const mediaSet = new Set<string>();
+        Array.from(imageElements)
             .map(img => (img as HTMLImageElement).src)
-            .filter(src => src && !src.includes('avatar')); // 过滤掉头像图片
+            .filter(src => {
+                if (!src) return false;
+                // 过滤掉头像、静态资源、图标等
+                if (src.includes('avatar')) return false;
+                if (src.includes('picasso-static')) return false; // 小红书静态资源
+                if (src.includes('emoji')) return false;
+                if (src.includes('icon')) return false;
+                if (src.includes('/fe-platform/')) return false; // 平台静态资源
+                // 只保留实际内容图片（通常是 sns-webpic 开头）
+                return src.includes('sns-webpic') || src.includes('xhscdn.com');
+            })
+            .forEach(src => mediaSet.add(src)); // 去重
+        const media = Array.from(mediaSet);
 
         const tweet: Tweet = {
             id: generateId(),
             tweetId: extractNoteId(noteUrl),
             tweetUrl: noteUrl,
             author: authorName,
-            authorHandle: authorName.toLowerCase().replace(/\s+/g, '_'),
+            authorHandle: authorUserId || authorName.toLowerCase().replace(/\s+/g, '_'),
+            authorProfileUrl: authorProfileUrl || undefined,
             content: fullContent,
             platform: 'xiaohongshu',
             keywords: [],
@@ -259,12 +285,22 @@ async function collectNote(noteElement: Element) {
 
                 // 如果启用了图片识别且有图片，先识别图片内容
                 if (settings.enableImageRecognition && media.length > 0) {
-                    console.log('图片识别已启用，开始识别图片内容...');
+                    console.log(`图片识别已启用，共 ${media.length} 张图片，开始识别...`);
                     try {
+                        // 最多识别 9 张图片（小红书单条笔记上限）
+                        const imagesToRecognize = media.slice(0, 9);
                         const imageTexts = await Promise.all(
-                            media.slice(0, 3).map(url => recognizeImage(settings, url))
+                            imagesToRecognize.map((url, idx) => 
+                                recognizeImage(settings, url).then(text => {
+                                    console.log(`图片 ${idx + 1}/${imagesToRecognize.length} 识别完成`);
+                                    return text;
+                                }).catch(err => {
+                                    console.warn(`图片 ${idx + 1} 识别失败:`, err);
+                                    return '';
+                                })
+                            )
                         );
-                        const recognizedText = imageTexts.filter(t => t).join('\n\n');
+                        const recognizedText = imageTexts.filter(t => t).join('\n\n---\n\n');
                         if (recognizedText) {
                             contentToAnalyze = `${fullContent}\n\n【图片内容】\n${recognizedText}`;
                             console.log('图片识别完成，识别出文字:', recognizedText.slice(0, 100));
