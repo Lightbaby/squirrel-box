@@ -5,6 +5,12 @@ import { Tweet } from '../lib/types';
 
 console.log('松鼠收藏夹 (小红书): Content script loaded');
 
+// 评论区数据类型
+interface CommentData {
+    authorThread: string;      // 作者自己的补充内容/回复
+    otherComments: string[];   // 其他用户的评论
+}
+
 let readingMode = false;
 let currentNote: Element | null = null;
 
@@ -253,6 +259,17 @@ async function collectNote(noteElement: Element) {
             .forEach(src => mediaSet.add(src)); // 去重
         const media = Array.from(mediaSet);
 
+        // 获取设置
+        const settings = await storage.getSettings();
+
+        // 收集评论区内容（如果启用）
+        let commentData: CommentData | null = null;
+        console.log('评论区收集设置:', settings?.enableCommentCollection ? '已开启' : '未开启');
+        if (settings?.enableCommentCollection) {
+            console.log('开始收集评论区内容...');
+            commentData = collectComments(authorName);
+        }
+
         const tweet: Tweet = {
             id: generateId(),
             tweetId: extractNoteId(noteUrl),
@@ -270,6 +287,9 @@ async function collectNote(noteElement: Element) {
                 retweets: 0,
                 replies: 0,
             },
+            // 评论区内容
+            authorThread: commentData?.authorThread || undefined,
+            commentHighlights: commentData?.otherComments.length ? commentData.otherComments.join('\n') : undefined,
         };
 
         console.log('Collecting note:', tweet);
@@ -278,10 +298,14 @@ async function collectNote(noteElement: Element) {
         await storage.saveTweet(tweet);
 
         // Get AI summary in background
-        const settings = await storage.getSettings();
         if (settings && settings.apiKey) {
             try {
                 let contentToAnalyze = fullContent;
+
+                // 如果有作者的补充内容，整合进去
+                if (commentData?.authorThread) {
+                    contentToAnalyze = `${fullContent}\n\n【作者补充内容】\n${commentData.authorThread}`;
+                }
 
                 // 如果启用了图片识别且有图片，先识别图片内容
                 if (settings.enableImageRecognition && media.length > 0) {
@@ -309,6 +333,11 @@ async function collectNote(noteElement: Element) {
                         console.error('图片识别失败:', error);
                         // 识别失败也继续处理原始内容
                     }
+                }
+
+                // 如果有其他用户的评论，添加到分析内容中
+                if (commentData?.otherComments.length) {
+                    contentToAnalyze = `${contentToAnalyze}\n\n【评论区观点】\n${commentData.otherComments.join('\n')}`;
                 }
 
                 const aiResult = await summarizeTweet(settings, contentToAnalyze);
@@ -343,6 +372,104 @@ function cleanNoteUrl(url: string): string {
     } catch {
         return url;
     }
+}
+
+// 收集评论区内容
+function collectComments(authorName: string): CommentData {
+    const result: CommentData = {
+        authorThread: '',
+        otherComments: []
+    };
+
+    const authorThreadParts: string[] = [];
+    const otherCommentsSet = new Set<string>();
+
+    // 小红书评论区的常见选择器
+    const commentSelectors = [
+        '.comment-item',
+        '.comments-container .comment',
+        '[class*="comment-item"]',
+        '[class*="CommentItem"]',
+        '.note-comment',
+    ];
+
+    let commentElements: Element[] = [];
+    for (const selector of commentSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            commentElements = Array.from(elements);
+            console.log(`找到评论元素: ${selector}, 数量: ${elements.length}`);
+            break;
+        }
+    }
+
+    if (commentElements.length === 0) {
+        console.log('未找到评论区元素');
+        return result;
+    }
+
+    commentElements.forEach((comment) => {
+        // 提取评论者名称
+        const nameSelectors = [
+            '.user-name',
+            '.author-name',
+            '[class*="nickname"]',
+            '[class*="userName"]',
+            '[class*="name"]',
+        ];
+        let commenterName = '';
+        for (const selector of nameSelectors) {
+            const nameEl = comment.querySelector(selector);
+            if (nameEl?.textContent?.trim()) {
+                commenterName = nameEl.textContent.trim();
+                break;
+            }
+        }
+
+        // 提取评论内容
+        const contentSelectors = [
+            '.comment-content',
+            '.content',
+            '[class*="content"]',
+            '[class*="text"]',
+        ];
+        let commentContent = '';
+        for (const selector of contentSelectors) {
+            const contentEl = comment.querySelector(selector);
+            if (contentEl?.textContent?.trim()) {
+                commentContent = contentEl.textContent.trim();
+                break;
+            }
+        }
+
+        if (!commentContent) return;
+
+        // 判断是否是作者的回复
+        const isAuthorComment = commenterName && 
+            (commenterName === authorName || 
+             comment.querySelector('[class*="author-tag"]') ||
+             comment.querySelector('[class*="作者"]'));
+
+        if (isAuthorComment) {
+            authorThreadParts.push(commentContent);
+        } else if (commenterName) {
+            const shortComment = commentContent.length > 100 
+                ? commentContent.slice(0, 100) + '...' 
+                : commentContent;
+            const commentWithAuthor = `${commenterName}: ${shortComment}`;
+            otherCommentsSet.add(commentWithAuthor);
+        }
+    });
+
+    result.authorThread = authorThreadParts.join('\n\n');
+    result.otherComments = Array.from(otherCommentsSet).slice(0, 10); // 最多取 10 条评论
+
+    console.log('评论区收集结果:', {
+        authorThread: result.authorThread.slice(0, 50),
+        commentsCount: result.otherComments.length
+    });
+
+    return result;
 }
 
 function showNotification(message: string) {
