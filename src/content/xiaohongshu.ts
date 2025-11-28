@@ -207,11 +207,20 @@ async function collectNote(noteElement: Element) {
             throw new Error('无法提取笔记内容');
         }
 
-        const authorName = authorElement?.textContent?.trim() || 'Unknown';
+        // 清理作者名称：移除"关注"、"已关注"等按钮文字
+        let authorName = authorElement?.textContent?.trim() || 'Unknown';
+        authorName = authorName
+            .replace(/关注$/, '')      // 移除结尾的"关注"
+            .replace(/已关注$/, '')    // 移除结尾的"已关注"
+            .replace(/\s*关注\s*$/, '') // 移除结尾的空格+关注
+            .trim();
 
-        // 提取笔记URL
+        // 提取笔记URL并清理
         const linkElement = noteElement.querySelector('a[href*="/explore/"]');
-        const noteUrl = linkElement ? new URL(linkElement.getAttribute('href') || '', window.location.origin).href : window.location.href;
+        let noteUrl = linkElement ? new URL(linkElement.getAttribute('href') || '', window.location.origin).href : window.location.href;
+        
+        // 清理 URL，只保留基础路径，移除可能过期的 token 参数
+        noteUrl = cleanNoteUrl(noteUrl);
 
         // 提取图片
         const imageElements = noteElement.querySelectorAll('img[src]');
@@ -287,6 +296,17 @@ async function collectNote(noteElement: Element) {
 function extractNoteId(url: string): string {
     const match = url.match(/\/explore\/([a-zA-Z0-9]+)/);
     return match ? match[1] : generateId();
+}
+
+// 清理笔记 URL，移除可能过期的 token 参数
+function cleanNoteUrl(url: string): string {
+    try {
+        const urlObj = new URL(url);
+        // 只保留基础路径，移除所有查询参数（xsec_token 等会过期）
+        return `${urlObj.origin}${urlObj.pathname}`;
+    } catch {
+        return url;
+    }
 }
 
 function showNotification(message: string) {
