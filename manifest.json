@@ -10,7 +10,8 @@
     },
     "permissions": [
         "storage",
-        "sidePanel"
+        "sidePanel",
+        "tabs"
     ],
     "background": {
         "service_worker": "src/background/index.ts",
