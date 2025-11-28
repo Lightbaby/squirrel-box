@@ -55,5 +55,11 @@
                 "src/content/xiaohongshu.ts"
             ]
         }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["icons/*"],
+            "matches": ["https://twitter.com/*", "https://x.com/*", "https://www.xiaohongshu.com/*", "https://xiaohongshu.com/*"]
+        }
     ]
 }
