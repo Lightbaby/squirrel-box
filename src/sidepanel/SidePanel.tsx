@@ -481,9 +481,9 @@ export default function SidePanel() {
                             <div className="text-center py-12 text-gray-500 dark:text-gray-500">
                                 <BookOpen className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-700" />
                                 <p className="text-sm">
-                                    {tweets.length === 0 ? '还没有收藏的推文' : '该类别暂无内容'}
+                                    {tweets.length === 0 ? '还没有收藏的内容' : '该类别暂无内容'}
                                 </p>
-                                <p className="text-xs mt-1 text-gray-500 dark:text-gray-600">在 Twitter 上点击悬浮按钮收藏</p>
+                                <p className="text-xs mt-1 text-gray-500 dark:text-gray-600">在 Twitter / 小红书上点击悬浮按钮收藏</p>
                             </div>
                         ) : (
                             filteredTweets.map((tweet) => (
