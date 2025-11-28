@@ -206,8 +206,28 @@ async function collectTweet(tweetElement: Element) {
         const authorElement = tweetElement.querySelector('[data-testid="User-Name"]');
         const authorName = authorElement?.querySelector('span')?.textContent || 'Unknown';
 
-        const handleElement = authorElement?.querySelectorAll('span')[1];
-        const authorHandle = handleElement?.textContent?.replace('@', '') || 'unknown';
+        // 改进 handle 提取：从用户链接中获取，更可靠
+        let authorHandle = 'unknown';
+        const userLink = tweetElement.querySelector('a[href^="/"][role="link"]');
+        if (userLink) {
+            const href = userLink.getAttribute('href') || '';
+            const handleMatch = href.match(/^\/([^/]+)$/);
+            if (handleMatch) {
+                authorHandle = handleMatch[1];
+            }
+        }
+        // 备用方案：查找包含 @ 的文本
+        if (authorHandle === 'unknown') {
+            const allSpans = authorElement?.querySelectorAll('span') || [];
+            for (const span of allSpans) {
+                const text = span.textContent || '';
+                if (text.startsWith('@')) {
+                    authorHandle = text.replace('@', '');
+                    break;
+                }
+            }
+        }
+        console.log('提取到的 authorHandle:', authorHandle);
 
         // Extract stats
         const likeButton = tweetElement.querySelector('[data-testid="like"]');
@@ -361,10 +381,28 @@ function collectComments(mainTweetElement: Element, authorHandle: string): Comme
         // 跳过主推文本身
         if (tweet === mainTweetElement) return;
 
-        // 提取这条推文的作者
-        const tweetAuthorElement = tweet.querySelector('[data-testid="User-Name"]');
-        const handleElement = tweetAuthorElement?.querySelectorAll('span')[1];
-        const tweetHandle = handleElement?.textContent?.replace('@', '') || '';
+        // 提取这条推文的作者 - 改进提取逻辑
+        let tweetHandle = '';
+        const userLink = tweet.querySelector('a[href^="/"][role="link"]');
+        if (userLink) {
+            const href = userLink.getAttribute('href') || '';
+            const handleMatch = href.match(/^\/([^/]+)$/);
+            if (handleMatch) {
+                tweetHandle = handleMatch[1];
+            }
+        }
+        // 备用方案：查找包含 @ 的文本
+        if (!tweetHandle) {
+            const tweetAuthorElement = tweet.querySelector('[data-testid="User-Name"]');
+            const allSpans = tweetAuthorElement?.querySelectorAll('span') || [];
+            for (const span of allSpans) {
+                const text = span.textContent || '';
+                if (text.startsWith('@')) {
+                    tweetHandle = text.replace('@', '');
+                    break;
+                }
+            }
+        }
 
         // 提取推文内容
         const textElement = tweet.querySelector('[data-testid="tweetText"]');
@@ -373,7 +411,7 @@ function collectComments(mainTweetElement: Element, authorHandle: string): Comme
         if (!content) return;
 
         // 判断是否是原作者的内容
-        if (tweetHandle.toLowerCase() === authorHandle.toLowerCase()) {
+        if (tweetHandle && tweetHandle.toLowerCase() === authorHandle.toLowerCase()) {
             // 作者自己的线程/回复
             authorThreadParts.push(content);
         } else if (tweetHandle) {
