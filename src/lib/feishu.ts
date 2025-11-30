@@ -547,7 +547,7 @@ async function syncToWiki(accessToken: string, wikiToken: string, tweets: Tweet[
  * 同步相关的接口类型定义
  */
 export interface FeishuSyncMessage {
-    type: 'FEISHU_SYNC' | 'FEISHU_TEST_CONNECTION' | 'OPEN_SIDE_PANEL';
+    type: 'FEISHU_SYNC' | 'SYNC_TO_FEISHU' | 'FEISHU_TEST_CONNECTION' | 'OPEN_SIDE_PANEL';
     settings?: Settings;
     tweets?: Tweet[];
     appId?: string;

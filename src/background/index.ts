@@ -44,20 +44,24 @@ chrome.runtime.onMessage.addListener((message: FeishuSyncMessage, sender, sendRe
         return true; // 保持消息通道开启以便异步响应
     }
 
-    // 处理飞书同步
-    if (message.type === 'FEISHU_SYNC') {
+    // 处理飞书同步（支持两种消息类型）
+    if (message.type === 'FEISHU_SYNC' || message.type === 'SYNC_TO_FEISHU') {
         if (message.settings && message.tweets) {
+            console.log('[Background] 收到飞书同步请求，内容数量:', message.tweets.length);
             syncToFeishu(message.settings, message.tweets)
                 .then(() => {
+                    console.log('[Background] 飞书同步成功');
                     sendResponse({ success: true });
                 })
                 .catch((error) => {
+                    console.error('[Background] 飞书同步失败:', error);
                     sendResponse({
                         success: false,
                         error: error instanceof Error ? error.message : '同步失败'
                     });
                 });
         } else {
+            console.error('[Background] 飞书同步参数不完整');
             sendResponse({ success: false, error: '缺少必要参数' });
         }
         return true; // 保持消息通道开启以便异步响应
