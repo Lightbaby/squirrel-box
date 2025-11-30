@@ -30,6 +30,37 @@ export const storage = {
         if (index !== -1) {
             tweets[index] = { ...tweets[index], ...updates };
             await chrome.storage.local.set({ [STORAGE_KEYS.TWEETS]: tweets });
+
+            // 如果是 AI 摘要完成的更新（包含 summary 字段），触发自动同步
+            if (updates.summary) {
+                const settings = await this.getSettings();
+                const shouldAutoSync = settings?.feishu?.autoSync &&
+                                      settings?.feishu?.appId &&
+                                      settings?.feishu?.appSecret &&
+                                      settings?.feishu?.docToken;
+
+                console.log('[Storage] AI 摘要已更新，检查自动同步配置:', {
+                    hasSettings: !!settings,
+                    autoSync: settings?.feishu?.autoSync,
+                    hasAppId: !!settings?.feishu?.appId,
+                    hasAppSecret: !!settings?.feishu?.appSecret,
+                    hasDocToken: !!settings?.feishu?.docToken,
+                    shouldAutoSync
+                });
+
+                if (shouldAutoSync) {
+                    console.log('[Storage] 触发自动同步到飞书（AI 摘要已完成）');
+                    try {
+                        const response = await chrome.runtime.sendMessage({
+                            type: 'SYNC_TO_FEISHU',
+                            tweets: [tweets[index]], // 只同步当前更新的这条
+                        });
+                        console.log('[Storage] 自动同步响应:', response);
+                    } catch (error) {
+                        console.error('[Storage] 自动同步失败:', error);
+                    }
+                }
+            }
         }
     },
 
