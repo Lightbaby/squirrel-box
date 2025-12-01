@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "松鼠收藏夹",
     "version": "1.1.0",
-    "description": "用 AI 收集整理 Twitter 和小红书的优质内容",
+    "description": "智能收藏 Twitter/小红书内容，AI 自动摘要分类，支持语义搜索、灵感采集、多语言创作",
     "icons": {
         "16": "icons/icon-16.png",
         "48": "icons/icon-48.png",
