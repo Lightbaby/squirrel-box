@@ -1,4 +1,4 @@
-import { Tweet, Settings } from './types';
+import { Tweet, Settings, InspirationItem } from './types';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -7,6 +7,9 @@ const STORAGE_KEYS = {
     SETTINGS: 'settings',
     READING_MODE: 'readingMode',
     THEME: 'theme',
+    // 灵感模式（使用 session storage）
+    INSPIRATION_MODE: 'inspirationMode',
+    INSPIRATION_ITEMS: 'inspirationItems',
 };
 
 export const storage = {
@@ -96,5 +99,50 @@ export const storage = {
 
     async setTheme(theme: Theme): Promise<void> {
         await chrome.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
+    },
+
+    // ==================== 灵感模式 ====================
+    // 使用 session storage，关闭浏览器自动清空
+
+    async getInspirationMode(): Promise<boolean> {
+        const result = await chrome.storage.session.get(STORAGE_KEYS.INSPIRATION_MODE);
+        return (result[STORAGE_KEYS.INSPIRATION_MODE] as boolean) ?? false;
+    },
+
+    async setInspirationMode(enabled: boolean): Promise<void> {
+        await chrome.storage.session.set({ [STORAGE_KEYS.INSPIRATION_MODE]: enabled });
+    },
+
+    async getInspirationItems(): Promise<InspirationItem[]> {
+        const result = await chrome.storage.session.get(STORAGE_KEYS.INSPIRATION_ITEMS);
+        return (result[STORAGE_KEYS.INSPIRATION_ITEMS] as InspirationItem[]) || [];
+    },
+
+    async addInspirationItem(item: InspirationItem): Promise<void> {
+        const items = await this.getInspirationItems();
+        // 去重：如果已存在相同 URL 的内容，更新它（详情页内容更丰富）
+        const existingIndex = items.findIndex(i => i.url === item.url);
+        if (existingIndex !== -1) {
+            // 如果新的是详情页内容，或者旧的不是详情页内容，则更新
+            if (item.isDetail || !items[existingIndex].isDetail) {
+                items[existingIndex] = { ...items[existingIndex], ...item };
+            }
+        } else {
+            // 新增到开头
+            items.unshift(item);
+        }
+        // 最多保留 50 条
+        const trimmedItems = items.slice(0, 50);
+        await chrome.storage.session.set({ [STORAGE_KEYS.INSPIRATION_ITEMS]: trimmedItems });
+    },
+
+    async clearInspirationItems(): Promise<void> {
+        await chrome.storage.session.set({ [STORAGE_KEYS.INSPIRATION_ITEMS]: [] });
+    },
+
+    async removeInspirationItem(itemId: string): Promise<void> {
+        const items = await this.getInspirationItems();
+        const filtered = items.filter(i => i.id !== itemId);
+        await chrome.storage.session.set({ [STORAGE_KEYS.INSPIRATION_ITEMS]: filtered });
     },
 };

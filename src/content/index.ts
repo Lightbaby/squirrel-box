@@ -1,13 +1,29 @@
 import { storage } from '../lib/storage';
 import { summarizeTweet, recognizeImage } from '../lib/ai';
 import { generateId } from '../lib/utils';
-import { Tweet } from '../lib/types';
+import { Tweet, InspirationItem } from '../lib/types';
 
 console.log('松鼠收藏夹: Content script loaded');
 
 let readingMode = false;
 let currentTweet: Element | null = null;
 let floatingBtnElement: HTMLElement | null = null; // 悬浮按钮元素引用
+
+// ==================== 灵感模式 ====================
+let inspirationMode = false;
+let capturedUrls = new Set<string>(); // 已采集的 URL，避免重复
+let lastUrl = location.href;
+
+// 初始化灵感模式状态
+chrome.runtime.sendMessage({ type: 'GET_INSPIRATION_MODE' }).then((response) => {
+    if (response?.enabled) {
+        inspirationMode = true;
+        console.log('[灵感模式] 已开启');
+        initInspirationCapture();
+    }
+}).catch(() => {
+    // 忽略错误
+});
 
 // Load reading mode state
 storage.getReadingMode().then((mode) => {
@@ -34,6 +50,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             floatingBtnElement.style.display = show ? 'flex' : 'none';
         }
         console.log('悬浮按钮显示状态:', show ? '显示' : '隐藏');
+        sendResponse({ success: true });
+    }
+
+    // 灵感模式状态变化
+    if (message.type === 'INSPIRATION_MODE_CHANGED') {
+        const wasEnabled = inspirationMode;
+        inspirationMode = message.enabled;
+        console.log('[灵感模式] 状态变化:', inspirationMode ? '开启' : '关闭');
+        
+        if (inspirationMode && !wasEnabled) {
+            initInspirationCapture();
+        } else if (!inspirationMode && wasEnabled) {
+            stopInspirationCapture();
+        }
         sendResponse({ success: true });
     }
 
@@ -541,6 +571,251 @@ async function publishTweetToTwitter(_content: string) {
     } catch (error) {
         console.error('Failed to open compose:', error);
         showNotification('📋 内容已复制！请按 Cmd+V 粘贴');
+    }
+}
+
+// ==================== 灵感模式采集逻辑 ====================
+
+// 初始化灵感采集
+function initInspirationCapture() {
+    console.log('[灵感模式] 初始化采集...');
+    
+    // 判断当前页面类型
+    if (isDetailPage()) {
+        captureDetailPage();
+    } else {
+        // 时间线/搜索结果：设置 Intersection Observer
+        setupListObserver();
+    }
+    
+    // 监听 URL 变化（SPA 路由）
+    setupUrlChangeListener();
+}
+
+// 停止灵感采集
+function stopInspirationCapture() {
+    console.log('[灵感模式] 停止采集');
+}
+
+// 判断是否为详情页（单条推文页面）
+function isDetailPage(): boolean {
+    return location.pathname.includes('/status/');
+}
+
+// 监听 URL 变化
+function setupUrlChangeListener() {
+    setInterval(() => {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            console.log('[灵感模式] URL 变化:', lastUrl);
+            
+            if (!inspirationMode) return;
+            
+            if (isDetailPage()) {
+                // 延迟采集，等待页面加载
+                setTimeout(() => captureDetailPage(), 1000);
+            }
+        }
+    }, 500);
+}
+
+// 设置时间线 Intersection Observer
+function setupListObserver() {
+    const observer = new IntersectionObserver((entries) => {
+        if (!inspirationMode) return;
+        
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                const tweetElement = entry.target as HTMLElement;
+                captureListItem(tweetElement);
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    // 观察所有推文
+    function observeTweets() {
+        const tweets = document.querySelectorAll('article[data-testid="tweet"]');
+        tweets.forEach((tweet) => {
+            if (!tweet.hasAttribute('data-inspiration-observed')) {
+                tweet.setAttribute('data-inspiration-observed', 'true');
+                observer.observe(tweet);
+            }
+        });
+    }
+    
+    // 初始观察
+    observeTweets();
+    
+    // 监听 DOM 变化，观察新加载的推文
+    const mutationObserver = new MutationObserver(() => {
+        if (inspirationMode) {
+            observeTweets();
+        }
+    });
+    
+    mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+}
+
+// 采集时间线单条推文（轻量：文字摘要）
+function captureListItem(tweetElement: HTMLElement) {
+    try {
+        // 提取推文 ID 和 URL
+        const link = tweetElement.querySelector('a[href*="/status/"]');
+        if (!link) return;
+        
+        const href = link.getAttribute('href') || '';
+        const match = href.match(/\/([^/]+)\/status\/(\d+)/);
+        if (!match) return;
+        
+        const authorHandle = match[1];
+        const tweetId = match[2];
+        const url = `https://twitter.com/${authorHandle}/status/${tweetId}`;
+        
+        // 去重检查
+        if (capturedUrls.has(url)) return;
+        capturedUrls.add(url);
+        
+        // 提取作者名
+        const authorElement = tweetElement.querySelector('[data-testid="User-Name"]');
+        const authorName = authorElement?.querySelector('span')?.textContent || authorHandle;
+        
+        // 提取作者头像
+        let authorAvatar = '';
+        const avatarImg = tweetElement.querySelector('img[src*="profile_images"]') as HTMLImageElement;
+        if (avatarImg?.src) {
+            authorAvatar = avatarImg.src.replace(/_normal\.(jpg|jpeg|png|gif|webp)$/i, '.$1');
+        }
+        
+        // 提取推文内容（摘要）
+        const textElement = tweetElement.querySelector('[data-testid="tweetText"]');
+        const content = textElement?.textContent?.trim() || '';
+        
+        // 提取缩略图（如果有）
+        const mediaImg = tweetElement.querySelector('img[src*="pbs.twimg.com/media"]') as HTMLImageElement;
+        const thumbnail = mediaImg?.src || '';
+        
+        // 如果没有内容也没有图片，跳过
+        if (!content && !thumbnail) return;
+        
+        const item: InspirationItem = {
+            id: generateId(),
+            platform: 'twitter',
+            author: authorName,
+            authorHandle,
+            authorAvatar: authorAvatar || undefined,
+            summary: content?.slice(0, 150) || undefined, // 列表页只取摘要
+            url,
+            thumbnail: thumbnail || undefined,
+            capturedAt: Date.now(),
+            isDetail: false,
+        };
+        
+        console.log('[灵感模式] 采集列表项:', item.summary?.slice(0, 30) || '[图片]');
+        
+        // 发送到 background 保存
+        chrome.runtime.sendMessage({
+            type: 'INSPIRATION_ITEM_CAPTURED',
+            item,
+        });
+    } catch (error) {
+        console.error('[灵感模式] 采集列表项失败:', error);
+    }
+}
+
+// 采集详情页（完整内容+评论区）
+async function captureDetailPage() {
+    if (!inspirationMode) return;
+    
+    try {
+        // 等待内容加载
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 找到主推文
+        const mainTweet = document.querySelector('article[data-testid="tweet"]');
+        if (!mainTweet) {
+            console.log('[灵感模式] 未找到主推文');
+            return;
+        }
+        
+        // 提取推文 ID 和 URL
+        const urlMatch = location.pathname.match(/\/([^/]+)\/status\/(\d+)/);
+        if (!urlMatch) return;
+        
+        const authorHandle = urlMatch[1];
+        const tweetId = urlMatch[2];
+        const url = `https://twitter.com/${authorHandle}/status/${tweetId}`;
+        
+        // 提取作者名
+        const authorElement = mainTweet.querySelector('[data-testid="User-Name"]');
+        const authorName = authorElement?.querySelector('span')?.textContent || authorHandle;
+        
+        // 提取作者头像
+        let authorAvatar = '';
+        const avatarImg = mainTweet.querySelector('img[src*="profile_images"]') as HTMLImageElement;
+        if (avatarImg?.src) {
+            authorAvatar = avatarImg.src.replace(/_normal\.(jpg|jpeg|png|gif|webp)$/i, '.$1');
+        }
+        
+        // 提取完整内容
+        const textElement = mainTweet.querySelector('[data-testid="tweetText"]');
+        const content = textElement?.textContent?.trim() || '';
+        
+        // 提取媒体
+        const mediaElements = mainTweet.querySelectorAll('img[src*="pbs.twimg.com"]');
+        const media = Array.from(mediaElements)
+            .map(img => (img as HTMLImageElement).src)
+            .filter(src => {
+                if (src.includes('profile_images')) return false;
+                if (src.includes('emoji')) return false;
+                if (src.includes('_normal') || src.includes('_mini')) return false;
+                return src.includes('/media/') || src.includes('tweet_video_thumb');
+            });
+        
+        // 如果没有内容也没有图片，跳过
+        if (!content && media.length === 0) {
+            console.log('[灵感模式] 详情页内容为空，跳过');
+            return;
+        }
+        
+        // 收集评论区
+        const settings = await storage.getSettings();
+        let commentData: CommentData | null = null;
+        if (settings?.enableCommentCollection) {
+            commentData = collectComments(mainTweet, authorHandle);
+        }
+        
+        const item: InspirationItem = {
+            id: generateId(),
+            platform: 'twitter',
+            author: authorName,
+            authorHandle,
+            authorAvatar: authorAvatar || undefined,
+            authorProfileUrl: `https://twitter.com/${authorHandle}`,
+            content: content || `[图片内容，共 ${media.length} 张]`,
+            url,
+            thumbnail: media[0] || undefined,
+            media: media.length > 0 ? media : undefined,
+            capturedAt: Date.now(),
+            isDetail: true,
+            authorThread: commentData?.authorThread || undefined,
+            commentHighlights: commentData?.otherComments.length ? commentData.otherComments.join('\n') : undefined,
+        };
+        
+        console.log('[灵感模式] 采集详情页:', item.content?.slice(0, 30));
+        
+        // 发送到 background 保存
+        chrome.runtime.sendMessage({
+            type: 'INSPIRATION_ITEM_CAPTURED',
+            item,
+        });
+        
+        // 标记已采集
+        capturedUrls.add(url);
+    } catch (error) {
+        console.error('[灵感模式] 采集详情页失败:', error);
     }
 }
 

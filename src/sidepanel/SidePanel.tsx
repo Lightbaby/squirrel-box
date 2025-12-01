@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
     BookOpen, PenTool, Trash2, Copy, Sparkles, Loader2, ExternalLink,
     Send, Settings as SettingsIcon, Download, MousePointer2,
     AlertTriangle, Sun, Moon, Monitor, ChevronDown, Filter,
-    Plus, Check, X, Library, Cloud, CloudOff
+    Plus, Check, X, Library, Cloud, CloudOff, Radio, Lightbulb
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { storage, Theme } from '../lib/storage';
-import { Tweet, Settings, CreationRequest } from '../lib/types';
+import { Tweet, Settings, CreationRequest, InspirationItem } from '../lib/types';
 import { generateTweet } from '../lib/ai';
 import { formatDate, cn } from '../lib/utils';
 
@@ -43,13 +43,26 @@ export default function SidePanel() {
     // 飞书同步状态
     const [syncing, setSyncing] = useState(false);
 
+    // ==================== 灵感模式状态 ====================
+    const [inspirationMode, setInspirationMode] = useState(false);
+    const [inspirationItems, setInspirationItems] = useState<InspirationItem[]>([]);
+    const [referenceSource, setReferenceSource] = useState<'collection' | 'inspiration'>('collection');
+    const [selectedInspirationItems, setSelectedInspirationItems] = useState<Set<string>>(new Set());
+
     useEffect(() => {
         loadData();
 
         // Listen for storage changes
-        chrome.storage.onChanged.addListener((changes) => {
+        chrome.storage.onChanged.addListener((changes, areaName) => {
             if (changes.tweets) {
                 setTweets((changes.tweets.newValue as Tweet[]) || []);
+            }
+            // 监听灵感数据变化（session storage）
+            if (areaName === 'session' && changes.inspirationItems) {
+                setInspirationItems((changes.inspirationItems.newValue as InspirationItem[]) || []);
+            }
+            if (areaName === 'session' && changes.inspirationMode) {
+                setInspirationMode(changes.inspirationMode.newValue as boolean);
             }
         });
     }, []);
@@ -69,14 +82,18 @@ export default function SidePanel() {
     }, [theme]);
 
     async function loadData() {
-        const [storedTweets, storedSettings, storedTheme] = await Promise.all([
+        const [storedTweets, storedSettings, storedTheme, storedInspirationMode, storedInspirationItems] = await Promise.all([
             storage.getTweets(),
             storage.getSettings(),
-            storage.getTheme()
+            storage.getTheme(),
+            storage.getInspirationMode(),
+            storage.getInspirationItems(),
         ]);
         setTweets(storedTweets);
         setSettings(storedSettings);
         setTheme(storedTheme);
+        setInspirationMode(storedInspirationMode);
+        setInspirationItems(storedInspirationItems);
         if (storedSettings) {
             setLanguage(storedSettings.defaultLanguage);
         }
@@ -148,19 +165,26 @@ export default function SidePanel() {
         setGeneratedVersions([]);
 
         try {
+            // 合并收藏和灵感的参考内容
             const referenceTweets = tweets
                 .filter(t => selectedTweets.has(t.id))
                 .map(t => ({ content: t.content, summary: t.summary }));
 
+            const referenceInspirations = inspirationItems
+                .filter(i => selectedInspirationItems.has(i.id))
+                .map(i => ({ content: i.content || i.summary || '', summary: i.title || i.summary }));
+
+            const allReferences = [...referenceTweets, ...referenceInspirations];
+
             const request: CreationRequest = {
                 topic,
-                references: Array.from(selectedTweets),
+                references: [...Array.from(selectedTweets), ...Array.from(selectedInspirationItems)],
                 language,
                 tone,
                 length,
             };
 
-            const versions = await generateTweet(settings, request, referenceTweets);
+            const versions = await generateTweet(settings, request, allReferences);
             setGeneratedVersions(versions);
         } catch (error) {
             alert(error instanceof Error ? error.message : '生成失败');
@@ -256,6 +280,69 @@ export default function SidePanel() {
             setSyncing(false);
         }
     }
+
+    // ==================== 灵感模式函数 ====================
+
+    // 切换灵感模式
+    const toggleInspirationMode = useCallback(async () => {
+        const newMode = !inspirationMode;
+        setInspirationMode(newMode);
+        
+        // 通知 background 广播给所有标签页
+        try {
+            await chrome.runtime.sendMessage({
+                type: 'INSPIRATION_MODE_CHANGED',
+                enabled: newMode,
+            });
+            showNotification(newMode ? '💡 灵感模式已开启' : '灵感模式已关闭');
+        } catch (error) {
+            console.error('切换灵感模式失败:', error);
+            showNotification('切换失败，请重试');
+            setInspirationMode(!newMode); // 回滚状态
+        }
+    }, [inspirationMode]);
+
+    // 清空灵感采集
+    const clearInspirationItems = useCallback(async () => {
+        try {
+            await chrome.runtime.sendMessage({ type: 'INSPIRATION_ITEMS_CLEAR' });
+            setInspirationItems([]);
+            setSelectedInspirationItems(new Set());
+            showNotification('已清空灵感采集');
+        } catch (error) {
+            console.error('清空灵感采集失败:', error);
+        }
+    }, []);
+
+    // 删除单条灵感内容
+    const removeInspirationItem = useCallback(async (itemId: string) => {
+        try {
+            await chrome.runtime.sendMessage({ type: 'INSPIRATION_ITEM_REMOVE', itemId });
+            setInspirationItems(prev => prev.filter(i => i.id !== itemId));
+            selectedInspirationItems.delete(itemId);
+            setSelectedInspirationItems(new Set(selectedInspirationItems));
+        } catch (error) {
+            console.error('删除灵感内容失败:', error);
+        }
+    }, [selectedInspirationItems]);
+
+    // 切换灵感内容选择
+    const toggleInspirationSelect = useCallback((itemId: string) => {
+        const newSelected = new Set(selectedInspirationItems);
+        if (newSelected.has(itemId)) {
+            newSelected.delete(itemId);
+        } else {
+            newSelected.add(itemId);
+        }
+        setSelectedInspirationItems(newSelected);
+    }, [selectedInspirationItems]);
+
+    // 获取平台图标颜色
+    const getPlatformColor = (platform?: string) => {
+        if (platform === 'twitter') return 'text-blue-500';
+        if (platform === 'xiaohongshu') return 'text-red-500';
+        return 'text-zinc-500';
+    };
 
     // 切换悬浮按钮显示
     async function toggleFloatingButton() {
@@ -814,9 +901,10 @@ export default function SidePanel() {
 
                 {activeTab === 'create' && (
                     <div className="space-y-4">
-                        {/* 创作参考区域 - 始终显示 */}
+                        {/* 创作参考区域 - 支持收藏和灵感两种来源 */}
                         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                             <div className="p-4">
+                                {/* 标题和清空按钮 */}
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
                                         <Library className="w-4 h-4 text-zinc-400" />
@@ -824,68 +912,245 @@ export default function SidePanel() {
                                             创作参考
                                         </h3>
                                     </div>
-                                    {selectedTweets.size > 0 && (
+                                    {(selectedTweets.size > 0 || selectedInspirationItems.size > 0) && (
                                         <button
-                                            onClick={() => setSelectedTweets(new Set())}
+                                            onClick={() => {
+                                                setSelectedTweets(new Set());
+                                                setSelectedInspirationItems(new Set());
+                                            }}
                                             className="text-xs text-zinc-400 hover:text-red-500 transition-colors"
                                         >
-                                            清空
+                                            清空选择
                                         </button>
                                     )}
                                 </div>
 
-                                {selectedTweets.size === 0 ? (
-                                    // 空状态 - 引导用户添加参考
+                                {/* 参考来源切换 Tabs */}
+                                <div className="flex gap-1 mb-3 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
                                     <button
-                                        onClick={() => {
-                                            setSelectMode(true);
-                                            setActiveTab('collection');
-                                        }}
-                                        className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-blue-500 hover:border-blue-400 dark:hover:border-blue-500 transition-all group"
+                                        onClick={() => setReferenceSource('collection')}
+                                        className={cn(
+                                            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all',
+                                            referenceSource === 'collection'
+                                                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                                                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                        )}
                                     >
-                                        <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                        <span className="text-sm">从收藏中选择参考内容</span>
+                                        <BookOpen className="w-3 h-3" />
+                                        收藏
+                                        {selectedTweets.size > 0 && (
+                                            <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                                {selectedTweets.size}
+                                            </span>
+                                        )}
                                     </button>
-                                ) : (
-                                    // 已选择的参考列表
-                                    <div className="space-y-2">
-                                        {Array.from(selectedTweets).map((id) => {
-                                            const tweet = tweets.find(t => t.id === id);
-                                            if (!tweet) return null;
-                                            return (
-                                                <div key={id} className="flex items-start gap-2 p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg group">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
-                                                            {tweet.author}
-                                                        </p>
-                                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                                                            {tweet.summary || tweet.content.slice(0, 50)}
-                                                        </p>
-                                                    </div>
+                                    <button
+                                        onClick={() => setReferenceSource('inspiration')}
+                                        className={cn(
+                                            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all',
+                                            referenceSource === 'inspiration'
+                                                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                                                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                        )}
+                                    >
+                                        <Lightbulb className={cn('w-3 h-3', inspirationMode && 'text-amber-500')} />
+                                        灵感
+                                        {selectedInspirationItems.size > 0 && (
+                                            <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                                {selectedInspirationItems.size}
+                                            </span>
+                                        )}
+                                        {inspirationMode && (
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* 收藏来源内容 */}
+                                {referenceSource === 'collection' && (
+                                    <>
+                                        {selectedTweets.size === 0 ? (
+                                            <button
+                                                onClick={() => {
+                                                    setSelectMode(true);
+                                                    setActiveTab('collection');
+                                                }}
+                                                className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-400 hover:text-blue-500 hover:border-blue-400 dark:hover:border-blue-500 transition-all group"
+                                            >
+                                                <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                <span className="text-sm">从收藏中选择参考内容</span>
+                                            </button>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {Array.from(selectedTweets).map((id) => {
+                                                    const tweet = tweets.find(t => t.id === id);
+                                                    if (!tweet) return null;
+                                                    return (
+                                                        <div key={id} className="flex items-start gap-2 p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg group">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                                                                    {tweet.author}
+                                                                </p>
+                                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                                                                    {tweet.summary || tweet.content.slice(0, 50)}
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const newSelected = new Set(selectedTweets);
+                                                                    newSelected.delete(id);
+                                                                    setSelectedTweets(newSelected);
+                                                                }}
+                                                                className="p-1 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectMode(true);
+                                                        setActiveTab('collection');
+                                                    }}
+                                                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    添加更多
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* 灵感来源内容 */}
+                                {referenceSource === 'inspiration' && (
+                                    <>
+                                        {/* 灵感模式开关 */}
+                                        <div className="flex items-center justify-between p-2 mb-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
+                                            <div className="flex items-center gap-2">
+                                                <Radio className={cn('w-4 h-4', inspirationMode ? 'text-amber-500' : 'text-zinc-400')} />
+                                                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                                    {inspirationMode ? '正在采集灵感...' : '灵感模式'}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={toggleInspirationMode}
+                                                className={cn(
+                                                    'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                                                    inspirationMode ? 'bg-amber-500' : 'bg-zinc-200 dark:bg-zinc-700'
+                                                )}
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                                                        inspirationMode ? 'translate-x-4' : 'translate-x-0'
+                                                    )}
+                                                />
+                                            </button>
+                                        </div>
+
+                                        {/* 灵感内容列表 */}
+                                        {inspirationItems.length === 0 ? (
+                                            <div className="text-center py-6">
+                                                <Lightbulb className="w-8 h-8 mx-auto mb-2 text-zinc-300 dark:text-zinc-600" />
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                                    {inspirationMode 
+                                                        ? '浏览 Twitter/小红书 内容，自动采集灵感' 
+                                                        : '开启灵感模式，自动采集浏览内容'}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {/* 工具栏 */}
+                                                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2">
+                                                    <span>已采集 {inspirationItems.length} 条</span>
                                                     <button
-                                                        onClick={() => {
-                                                            const newSelected = new Set(selectedTweets);
-                                                            newSelected.delete(id);
-                                                            setSelectedTweets(newSelected);
-                                                        }}
-                                                        className="p-1 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                        onClick={clearInspirationItems}
+                                                        className="hover:text-red-500 transition-colors"
                                                     >
-                                                        <X className="w-3 h-3" />
+                                                        清空全部
                                                     </button>
                                                 </div>
-                                            );
-                                        })}
-                                        <button
-                                            onClick={() => {
-                                                setSelectMode(true);
-                                                setActiveTab('collection');
-                                            }}
-                                            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
-                                        >
-                                            <Plus className="w-3 h-3" />
-                                            添加更多
-                                        </button>
-                                    </div>
+                                                
+                                                {/* 灵感列表（最新的在前面） */}
+                                                <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-thin">
+                                                    {inspirationItems.slice(0, 20).map((item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            onClick={() => toggleInspirationSelect(item.id)}
+                                                            className={cn(
+                                                                'flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-all group',
+                                                                selectedInspirationItems.has(item.id)
+                                                                    ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700'
+                                                                    : 'bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                                            )}
+                                                        >
+                                                            {/* 选择框 */}
+                                                            <div className={cn(
+                                                                'shrink-0 w-4 h-4 mt-0.5 rounded border flex items-center justify-center transition-all',
+                                                                selectedInspirationItems.has(item.id)
+                                                                    ? 'bg-amber-500 border-amber-500'
+                                                                    : 'border-zinc-300 dark:border-zinc-600'
+                                                            )}>
+                                                                {selectedInspirationItems.has(item.id) && (
+                                                                    <Check className="w-3 h-3 text-white" />
+                                                                )}
+                                                            </div>
+                                                            
+                                                            {/* 缩略图 */}
+                                                            {item.thumbnail && (
+                                                                <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                                                                    <img
+                                                                        src={item.thumbnail}
+                                                                        alt=""
+                                                                        className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.style.display = 'none';
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* 内容 */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                                    <span className={cn('text-[10px]', getPlatformColor(item.platform))}>
+                                                                        {item.platform === 'twitter' ? 'Twitter' : '小红书'}
+                                                                    </span>
+                                                                    {item.isDetail && (
+                                                                        <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1 rounded">
+                                                                            详情
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-[10px] text-zinc-400">
+                                                                        {item.author}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
+                                                                    {item.title || item.content || item.summary}
+                                                                </p>
+                                                            </div>
+                                                            
+                                                            {/* 删除按钮 */}
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    removeInspirationItem(item.id);
+                                                                }}
+                                                                className="p-1 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

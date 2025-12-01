@@ -25,6 +25,35 @@ export interface Tweet {
     commentHighlights?: string; // 评论区精选观点
 }
 
+// 灵感模式 - 采集的内容项
+export interface InspirationItem {
+    id: string;
+    platform: 'twitter' | 'xiaohongshu';
+    author: string;
+    authorHandle?: string;
+    authorAvatar?: string;
+    authorProfileUrl?: string;
+    title?: string;           // 列表页采集的标题
+    summary?: string;         // 列表页采集的摘要/预览
+    content?: string;         // 详情页采集的完整内容
+    url: string;
+    thumbnail?: string;       // 缩略图
+    media?: string[];         // 详情页采集的图片
+    capturedAt: number;       // 采集时间
+    isDetail: boolean;        // 是否为详情页采集（内容更丰富）
+    // 详情页采集时的评论区内容
+    authorThread?: string;
+    commentHighlights?: string;
+}
+
+// 灵感模式相关消息类型
+export interface InspirationMessage {
+    type: 'INSPIRATION_MODE_CHANGED' | 'INSPIRATION_ITEM_CAPTURED' | 'INSPIRATION_ITEMS_CLEAR' | 'GET_INSPIRATION_MODE' | 'GET_INSPIRATION_ITEMS';
+    enabled?: boolean;
+    item?: InspirationItem;
+    items?: InspirationItem[];
+}
+
 export interface Settings {
     apiKey: string;
     baseUrl: string;

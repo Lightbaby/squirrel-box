@@ -1,7 +1,7 @@
 import { storage } from '../lib/storage';
 import { summarizeTweet, recognizeImage } from '../lib/ai';
 import { generateId } from '../lib/utils';
-import { Tweet } from '../lib/types';
+import { Tweet, InspirationItem } from '../lib/types';
 
 console.log('松鼠收藏夹 (小红书): Content script loaded');
 
@@ -13,6 +13,23 @@ interface CommentData {
 
 let readingMode = false;
 let currentNote: Element | null = null;
+
+// ==================== 灵感模式 ====================
+let inspirationMode = false;
+let capturedUrls = new Set<string>(); // 已采集的 URL，避免重复
+let detailPageObserver: MutationObserver | null = null;
+let lastUrl = location.href;
+
+// 初始化灵感模式状态
+chrome.runtime.sendMessage({ type: 'GET_INSPIRATION_MODE' }).then((response) => {
+    if (response?.enabled) {
+        inspirationMode = true;
+        console.log('[灵感模式] 已开启');
+        initInspirationCapture();
+    }
+}).catch(() => {
+    // 忽略错误
+});
 
 // Load reading mode state
 storage.getReadingMode().then((mode) => {
@@ -30,6 +47,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'PUBLISH_TWEET') {
         // 小红书发布功能可以后续实现
         sendResponse({ success: false, message: '小红书发布功能开发中' });
+    }
+
+    // 灵感模式状态变化
+    if (message.type === 'INSPIRATION_MODE_CHANGED') {
+        const wasEnabled = inspirationMode;
+        inspirationMode = message.enabled;
+        console.log('[灵感模式] 状态变化:', inspirationMode ? '开启' : '关闭');
+        
+        if (inspirationMode && !wasEnabled) {
+            initInspirationCapture();
+        } else if (!inspirationMode && wasEnabled) {
+            stopInspirationCapture();
+        }
+        sendResponse({ success: true });
     }
 
     return true;
@@ -550,6 +581,257 @@ function showNotification(message: string) {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 2000);
+}
+
+// ==================== 灵感模式采集逻辑 ====================
+
+// 初始化灵感采集
+function initInspirationCapture() {
+    console.log('[灵感模式] 初始化采集...');
+    
+    // 判断当前页面类型
+    if (isDetailPage()) {
+        captureDetailPage();
+    } else {
+        // 列表页：设置 Intersection Observer
+        setupListObserver();
+    }
+    
+    // 监听 URL 变化（SPA 路由）
+    setupUrlChangeListener();
+}
+
+// 停止灵感采集
+function stopInspirationCapture() {
+    console.log('[灵感模式] 停止采集');
+    if (detailPageObserver) {
+        detailPageObserver.disconnect();
+        detailPageObserver = null;
+    }
+}
+
+// 判断是否为详情页
+function isDetailPage(): boolean {
+    return location.pathname.includes('/explore/') || 
+           location.pathname.includes('/discovery/item/') ||
+           location.pathname.includes('/search_result/');
+}
+
+// 监听 URL 变化
+function setupUrlChangeListener() {
+    // 使用 setInterval 检测 URL 变化（兼容 SPA）
+    setInterval(() => {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            console.log('[灵感模式] URL 变化:', lastUrl);
+            
+            if (!inspirationMode) return;
+            
+            if (isDetailPage()) {
+                // 延迟采集，等待页面加载
+                setTimeout(() => captureDetailPage(), 1000);
+            }
+        }
+    }, 500);
+}
+
+// 设置列表页 Intersection Observer
+function setupListObserver() {
+    const observer = new IntersectionObserver((entries) => {
+        if (!inspirationMode) return;
+        
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                const noteCard = entry.target as HTMLElement;
+                captureListItem(noteCard);
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    // 观察所有笔记卡片
+    function observeNoteCards() {
+        const noteCards = document.querySelectorAll('.note-item, [class*="note-item"], .feeds-page section, [class*="NoteItem"]');
+        noteCards.forEach((card) => {
+            if (!card.hasAttribute('data-inspiration-observed')) {
+                card.setAttribute('data-inspiration-observed', 'true');
+                observer.observe(card);
+            }
+        });
+    }
+    
+    // 初始观察
+    observeNoteCards();
+    
+    // 监听 DOM 变化，观察新加载的卡片
+    const mutationObserver = new MutationObserver(() => {
+        if (inspirationMode) {
+            observeNoteCards();
+        }
+    });
+    
+    mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+}
+
+// 采集列表页单个笔记（轻量：标题+摘要）
+function captureListItem(noteCard: HTMLElement) {
+    try {
+        // 提取链接
+        const linkElement = noteCard.querySelector('a[href*="/explore/"], a[href*="/discovery/item/"]');
+        if (!linkElement) return;
+        
+        const href = linkElement.getAttribute('href') || '';
+        const url = href.startsWith('http') ? href : `https://www.xiaohongshu.com${href}`;
+        
+        // 去重检查
+        if (capturedUrls.has(url)) return;
+        capturedUrls.add(url);
+        
+        // 提取标题
+        const titleElement = noteCard.querySelector('.title, [class*="title"], [class*="Title"]');
+        const title = titleElement?.textContent?.trim() || '';
+        
+        // 提取摘要/描述
+        const descElement = noteCard.querySelector('.desc, [class*="desc"], [class*="content"]');
+        const summary = descElement?.textContent?.trim()?.slice(0, 100) || '';
+        
+        // 提取作者
+        const authorElement = noteCard.querySelector('.author-name, [class*="author"], .name, [class*="nickname"]');
+        let author = authorElement?.textContent?.trim() || '未知作者';
+        author = author.replace(/关注$/, '').replace(/已关注$/, '').trim();
+        
+        // 提取作者头像
+        const avatarElement = noteCard.querySelector('img[src*="sns-avatar"]') as HTMLImageElement;
+        const authorAvatar = avatarElement?.src || '';
+        
+        // 提取缩略图
+        const thumbElement = noteCard.querySelector('img[src*="sns-webpic"], img[src*="xhscdn"]') as HTMLImageElement;
+        const thumbnail = thumbElement?.src || '';
+        
+        const item: InspirationItem = {
+            id: generateId(),
+            platform: 'xiaohongshu',
+            author,
+            authorAvatar: authorAvatar || undefined,
+            title: title || undefined,
+            summary: summary || title || undefined,
+            url,
+            thumbnail: thumbnail || undefined,
+            capturedAt: Date.now(),
+            isDetail: false,
+        };
+        
+        console.log('[灵感模式] 采集列表项:', item.title || item.summary?.slice(0, 20));
+        
+        // 发送到 background 保存
+        chrome.runtime.sendMessage({
+            type: 'INSPIRATION_ITEM_CAPTURED',
+            item,
+        });
+    } catch (error) {
+        console.error('[灵感模式] 采集列表项失败:', error);
+    }
+}
+
+// 采集详情页（完整内容+评论区）
+async function captureDetailPage() {
+    if (!inspirationMode) return;
+    
+    try {
+        const url = cleanNoteUrl(location.href);
+        
+        // 去重检查（但详情页可以覆盖列表页的轻量数据）
+        // 不在这里检查，让 storage 层处理合并逻辑
+        
+        // 等待内容加载
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 提取标题
+        const titleElement = document.querySelector('.title, [class*="title"], h1');
+        const title = titleElement?.textContent?.trim() || '';
+        
+        // 提取内容
+        const contentElement = document.querySelector('.note-content, [class*="content"], .desc, #detail-desc');
+        const content = contentElement?.textContent?.trim() || '';
+        
+        // 提取作者
+        const authorElement = document.querySelector('.author-name, [class*="author"], .user-name, [class*="nickname"]');
+        let author = authorElement?.textContent?.trim() || '未知作者';
+        author = author.replace(/关注$/, '').replace(/已关注$/, '').trim();
+        
+        // 提取作者头像
+        let authorAvatar = '';
+        const authorLinkElement = document.querySelector('a[href*="/user/profile/"]');
+        if (authorLinkElement) {
+            const avatarImg = authorLinkElement.querySelector('img[src*="sns-avatar"]') as HTMLImageElement;
+            if (avatarImg?.src) {
+                authorAvatar = avatarImg.src;
+            }
+        }
+        
+        // 提取作者主页链接和 handle
+        let authorProfileUrl = '';
+        let authorHandle = '';
+        if (authorLinkElement) {
+            const href = authorLinkElement.getAttribute('href') || '';
+            authorProfileUrl = href.startsWith('http') ? href : `https://www.xiaohongshu.com${href}`;
+            const userIdMatch = authorProfileUrl.match(/\/user\/profile\/([a-zA-Z0-9]+)/);
+            authorHandle = userIdMatch ? userIdMatch[1] : '';
+        }
+        
+        // 提取图片
+        const imageElements = document.querySelectorAll('.note-slider img[src*="sns-webpic"], .swiper-slide img[src*="xhscdn"]');
+        const media = Array.from(imageElements)
+            .map(img => (img as HTMLImageElement).src)
+            .filter(src => src && !src.includes('avatar'));
+        
+        // 收集评论区
+        const settings = await storage.getSettings();
+        let commentData: CommentData | null = null;
+        if (settings?.enableCommentCollection) {
+            commentData = collectComments(author);
+        }
+        
+        const fullContent = title ? `${title}\n\n${content}` : content;
+        
+        if (!fullContent && media.length === 0) {
+            console.log('[灵感模式] 详情页内容为空，跳过');
+            return;
+        }
+        
+        const item: InspirationItem = {
+            id: generateId(),
+            platform: 'xiaohongshu',
+            author,
+            authorHandle: authorHandle || undefined,
+            authorAvatar: authorAvatar || undefined,
+            authorProfileUrl: authorProfileUrl || undefined,
+            title: title || undefined,
+            content: fullContent || undefined,
+            url,
+            thumbnail: media[0] || undefined,
+            media: media.length > 0 ? media : undefined,
+            capturedAt: Date.now(),
+            isDetail: true,
+            authorThread: commentData?.authorThread || undefined,
+            commentHighlights: commentData?.otherComments.length ? commentData.otherComments.join('\n') : undefined,
+        };
+        
+        console.log('[灵感模式] 采集详情页:', item.title?.slice(0, 20) || item.content?.slice(0, 20));
+        
+        // 发送到 background 保存
+        chrome.runtime.sendMessage({
+            type: 'INSPIRATION_ITEM_CAPTURED',
+            item,
+        });
+        
+        // 标记已采集
+        capturedUrls.add(url);
+    } catch (error) {
+        console.error('[灵感模式] 采集详情页失败:', error);
+    }
 }
 
 // Add styles
