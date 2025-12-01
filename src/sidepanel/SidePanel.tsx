@@ -65,10 +65,11 @@ export default function SidePanel() {
                 const oldItems = (changes.inspirationItems.oldValue as InspirationItem[]) || [];
                 setInspirationItems(newItems);
                 
-                // 检测新增的内容，添加到采集日志
+                // 检测新增的内容
                 if (newItems.length > oldItems.length) {
                     const newItem = newItems[0]; // 新内容在最前面
                     if (newItem) {
+                        // 添加到采集日志
                         const logText = newItem.isDetail 
                             ? `📄 详情：${newItem.title || newItem.content?.slice(0, 30) || '...'}`
                             : `📋 列表：${newItem.title || newItem.summary?.slice(0, 30) || '...'}`;
@@ -76,6 +77,13 @@ export default function SidePanel() {
                             { text: logText, time: Date.now() },
                             ...prev.slice(0, 4) // 最多保留 5 条
                         ]);
+                        
+                        // 自动选中新采集的内容
+                        setSelectedInspirationItems(prev => {
+                            const newSet = new Set(prev);
+                            newSet.add(newItem.id);
+                            return newSet;
+                        });
                     }
                 }
             }
@@ -112,6 +120,10 @@ export default function SidePanel() {
         setTheme(storedTheme);
         setInspirationMode(storedInspirationMode);
         setInspirationItems(storedInspirationItems);
+        // 默认选中所有灵感内容
+        if (storedInspirationItems.length > 0) {
+            setSelectedInspirationItems(new Set(storedInspirationItems.map(item => item.id)));
+        }
         if (storedSettings) {
             setLanguage(storedSettings.defaultLanguage);
         }

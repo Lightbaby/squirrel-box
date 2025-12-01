@@ -662,6 +662,11 @@ function setupListObserver() {
 // 采集时间线单条推文（轻量：文字摘要）
 function captureListItem(tweetElement: HTMLElement) {
     try {
+        // 在详情页时不采集列表项（避免把评论当成单独的帖子）
+        if (isDetailPage()) {
+            return;
+        }
+        
         // 提取推文 ID 和 URL
         const link = tweetElement.querySelector('a[href*="/status/"]');
         if (!link) return;
