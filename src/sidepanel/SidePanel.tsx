@@ -355,13 +355,6 @@ export default function SidePanel() {
         setSelectedInspirationItems(newSelected);
     }, [selectedInspirationItems]);
 
-    // 获取平台图标颜色
-    const getPlatformColor = (platform?: string) => {
-        if (platform === 'twitter') return 'text-blue-500';
-        if (platform === 'xiaohongshu') return 'text-red-500';
-        return 'text-zinc-500';
-    };
-
     // 切换悬浮按钮显示
     async function toggleFloatingButton() {
         const newValue = settings?.showFloatingButton === false;
@@ -1064,155 +1057,201 @@ export default function SidePanel() {
 
                                 {/* 灵感来源内容 */}
                                 {referenceSource === 'inspiration' && (
-                                    <>
-                                        {/* 灵感模式开关 */}
-                                        <div className="flex items-center justify-between p-2 mb-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
-                                            <div className="flex items-center gap-2">
-                                                <Radio className={cn('w-4 h-4', inspirationMode ? 'text-amber-500' : 'text-zinc-400')} />
-                                                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                                                    {inspirationMode ? '正在采集灵感...' : '灵感模式'}
-                                                </span>
-                                            </div>
-                                            <button
-                                                onClick={toggleInspirationMode}
-                                                className={cn(
-                                                    'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                                                    inspirationMode ? 'bg-amber-500' : 'bg-zinc-200 dark:bg-zinc-700'
-                                                )}
-                                            >
-                                                <span
-                                                    className={cn(
-                                                        'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                                                        inspirationMode ? 'translate-x-4' : 'translate-x-0'
-                                                    )}
-                                                />
-                                            </button>
-                                        </div>
-                                        
-                                        {/* 实时采集日志 */}
-                                        {inspirationMode && captureLog.length > 0 && (
-                                            <div className="mb-3 p-2 bg-zinc-900/5 dark:bg-zinc-100/5 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50">
-                                                <div className="flex items-center gap-1.5 mb-1.5">
-                                                    <span className="relative flex h-2 w-2">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                                    </span>
-                                                    <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">采集日志</span>
-                                                </div>
-                                                <div className="space-y-0.5 max-h-20 overflow-y-auto">
-                                                    {captureLog.map((log, idx) => (
-                                                        <div 
-                                                            key={log.time} 
-                                                            className={cn(
-                                                                "text-[11px] text-zinc-600 dark:text-zinc-400 truncate transition-opacity duration-300",
-                                                                idx === 0 ? "opacity-100" : "opacity-60"
-                                                            )}
-                                                        >
-                                                            {log.text}
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                        {/* 灵感模式开关卡片 */}
+                                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200/50 dark:border-amber-800/30 rounded-xl p-4 relative overflow-hidden">
+                                            {/* 背景装饰 */}
+                                            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-amber-100 dark:bg-amber-900/20 rounded-full blur-2xl opacity-50 pointer-events-none"></div>
+                                            
+                                            <div className="flex items-center justify-between relative z-10">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <div className={cn(
+                                                            "p-1.5 rounded-lg transition-colors",
+                                                            inspirationMode ? "bg-amber-500 text-white shadow-sm" : "bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400"
+                                                        )}>
+                                                            <Sparkles className="w-4 h-4" />
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* 灵感内容列表 */}
-                                        {inspirationItems.length === 0 ? (
-                                            <div className="text-center py-6">
-                                                <Lightbulb className="w-8 h-8 mx-auto mb-2 text-zinc-300 dark:text-zinc-600" />
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                                    {inspirationMode 
-                                                        ? '浏览 Twitter/小红书 内容，自动采集灵感' 
-                                                        : '开启灵感模式，自动采集浏览内容'}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {/* 工具栏 */}
-                                                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2">
-                                                    <span>已采集 {inspirationItems.length} 条</span>
-                                                    <button
-                                                        onClick={clearInspirationItems}
-                                                        className="hover:text-red-500 transition-colors"
-                                                    >
-                                                        清空全部
-                                                    </button>
+                                                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">灵感模式</h3>
+                                                    </div>
+                                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                                        {inspirationMode 
+                                                            ? '正在自动采集浏览内容...' 
+                                                            : '浏览时自动采集灵感素材'}
+                                                    </p>
                                                 </div>
                                                 
-                                                {/* 灵感列表（最新的在前面） */}
-                                                <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-thin">
+                                                <button
+                                                    onClick={toggleInspirationMode}
+                                                    className={cn(
+                                                        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900',
+                                                        inspirationMode ? 'bg-amber-500' : 'bg-zinc-200 dark:bg-zinc-700'
+                                                    )}
+                                                >
+                                                    <span className="sr-only">Use setting</span>
+                                                    <span
+                                                        className={cn(
+                                                            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                                                            inspirationMode ? 'translate-x-5' : 'translate-x-0'
+                                                        )}
+                                                    />
+                                                </button>
+                                            </div>
+
+                                            {/* 实时采集日志 */}
+                                            {inspirationMode && captureLog.length > 0 && (
+                                                <div className="mt-4 pt-3 border-t border-amber-200/30 dark:border-amber-800/30">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="relative flex h-2 w-2">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider">实时动态</span>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        {captureLog.slice(0, 3).map((log, idx) => (
+                                                            <div 
+                                                                key={log.time} 
+                                                                className={cn(
+                                                                    "flex items-start gap-2 text-xs transition-all duration-300",
+                                                                    idx === 0 ? "text-zinc-700 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-500"
+                                                                )}
+                                                            >
+                                                                <span className="text-[10px] opacity-50 mt-0.5">{new Date(log.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                                <span className="truncate flex-1">{log.text}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 灵感内容列表 */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between px-1">
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                                        采集列表
+                                                    </h4>
+                                                    <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium px-1.5 py-0.5 rounded-md">
+                                                        {inspirationItems.length}
+                                                    </span>
+                                                </div>
+                                                {inspirationItems.length > 0 && (
+                                                    <button
+                                                        onClick={clearInspirationItems}
+                                                        className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                        清空
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {inspirationItems.length === 0 ? (
+                                                <div className="text-center py-8 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-xl">
+                                                    <div className="bg-zinc-50 dark:bg-zinc-900 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                        <Lightbulb className="w-6 h-6 text-zinc-300 dark:text-zinc-600" />
+                                                    </div>
+                                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-[200px] mx-auto leading-relaxed">
+                                                        {inspirationMode 
+                                                            ? '去浏览 Twitter 或 小红书\n灵感会自动出现在这里' 
+                                                            : '开启上方灵感模式\n自动采集你的浏览足迹'}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="max-h-[300px] overflow-y-auto space-y-2 scrollbar-thin pr-1">
                                                     {inspirationItems.slice(0, 20).map((item) => (
                                                         <div
                                                             key={item.id}
                                                             onClick={() => toggleInspirationSelect(item.id)}
                                                             className={cn(
-                                                                'flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-all group',
+                                                                'group relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all border',
                                                                 selectedInspirationItems.has(item.id)
-                                                                    ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700'
-                                                                    : 'bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                                                    ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50 shadow-sm ring-1 ring-amber-200 dark:ring-amber-800/30'
+                                                                    : 'bg-white dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                                                             )}
                                                         >
-                                                            {/* 选择框 */}
-                                                            <div className={cn(
-                                                                'shrink-0 w-4 h-4 mt-0.5 rounded border flex items-center justify-center transition-all',
-                                                                selectedInspirationItems.has(item.id)
-                                                                    ? 'bg-amber-500 border-amber-500'
-                                                                    : 'border-zinc-300 dark:border-zinc-600'
-                                                            )}>
-                                                                {selectedInspirationItems.has(item.id) && (
-                                                                    <Check className="w-3 h-3 text-white" />
-                                                                )}
-                                                            </div>
-                                                            
                                                             {/* 缩略图 */}
-                                                            {item.thumbnail && (
-                                                                <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                                                            <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700/50">
+                                                                {item.thumbnail ? (
                                                                     <img
                                                                         src={item.thumbnail}
                                                                         alt=""
-                                                                        className="w-full h-full object-cover"
+                                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                                         onError={(e) => {
                                                                             e.currentTarget.style.display = 'none';
+                                                                            e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-zinc-300 dark:text-zinc-600"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`;
                                                                         }}
                                                                     />
-                                                                </div>
-                                                            )}
-                                                            
-                                                            {/* 内容 */}
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center gap-1.5 mb-0.5">
-                                                                    <span className={cn('text-[10px]', getPlatformColor(item.platform))}>
-                                                                        {item.platform === 'twitter' ? 'Twitter' : '小红书'}
-                                                                    </span>
-                                                                    {item.isDetail && (
-                                                                        <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1 rounded">
-                                                                            详情
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="text-[10px] text-zinc-400">
-                                                                        {item.author}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
-                                                                    {item.title || item.content || item.summary}
-                                                                </p>
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-zinc-300 dark:text-zinc-600">
+                                                                        <div className="w-5 h-5 opacity-50">
+                                                                            {item.platform === 'twitter' ? (
+                                                                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                                                                            ) : (
+                                                                                <BookOpen className="w-full h-full" />
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             
+                                                            {/* 内容 */}
+                                                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                                                                <div>
+                                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                                        <span className={cn(
+                                                                            'text-[10px] px-1.5 py-0.5 rounded-md font-medium flex items-center gap-1',
+                                                                            item.platform === 'twitter' 
+                                                                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                                                                                : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                                                                        )}>
+                                                                            {item.platform === 'twitter' ? 'Twitter' : '小红书'}
+                                                                        </span>
+                                                                        {item.isDetail && (
+                                                                            <span className="text-[10px] bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md font-medium">
+                                                                                详情
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="text-[10px] text-zinc-400 truncate max-w-[80px]">
+                                                                            @{item.author}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs text-zinc-700 dark:text-zinc-300 line-clamp-2 font-medium leading-relaxed">
+                                                                        {item.title || item.content || item.summary}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* 选择状态指示器 */}
+                                                            <div className={cn(
+                                                                'absolute top-3 right-3 w-4 h-4 rounded-full border transition-all flex items-center justify-center',
+                                                                selectedInspirationItems.has(item.id)
+                                                                    ? 'bg-amber-500 border-amber-500 shadow-sm'
+                                                                    : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 opacity-0 group-hover:opacity-100'
+                                                            )}>
+                                                                {selectedInspirationItems.has(item.id) && (
+                                                                    <Check className="w-2.5 h-2.5 text-white" />
+                                                                )}
+                                                            </div>
+
                                                             {/* 删除按钮 */}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     removeInspirationItem(item.id);
                                                                 }}
-                                                                className="p-1 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                                                                className="absolute bottom-3 right-3 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md opacity-0 group-hover:opacity-100 transition-all"
                                                             >
-                                                                <X className="w-3 h-3" />
+                                                                <Trash2 className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        )}
-                                    </>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
