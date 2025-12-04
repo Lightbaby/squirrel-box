@@ -1,5 +1,14 @@
 # 更新日志
 
+## [2025-12-04]
+
+### 文档
+- **隐私权政策**：新增隐私政策页面（`docs/privacy-policy.html` 和 `docs/privacy-policy.md`），满足 Chrome Web Store 上架要求
+  - 详细说明数据收集、存储、安全措施
+  - 说明第三方 AI 服务的数据流向
+  - 列明扩展权限用途
+  - 支持 GitHub Pages 托管
+
 ## [2025-12-01]
 
 ### 新功能

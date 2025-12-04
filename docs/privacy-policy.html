@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>松鼠收藏夹 - 隐私权政策</title>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface-hover: #252525;
+            --text: #e5e5e5;
+            --text-muted: #a0a0a0;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --border: #333;
+            --success: #22c55e;
+            --warning: #eab308;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent) 0%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .update-date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 40px 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: var(--text);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--text-muted);
+        }
+
+        .highlight-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .highlight-box.success {
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .principle-list {
+            list-style: none;
+        }
+
+        .principle-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .principle-list li::before {
+            content: '✅';
+            flex-shrink: 0;
+        }
+
+        .no-list li::before {
+            content: '❌';
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: var(--surface);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--surface-hover);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        ul:not(.principle-list) {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+
+        ul:not(.principle-list) li {
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        ol {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+
+        ol li {
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        .security-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .security-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-radius: 8px;
+            color: var(--text);
+        }
+
+        .security-list li strong {
+            color: var(--accent);
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        footer p {
+            margin-bottom: 8px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: var(--surface-hover);
+            border-color: var(--accent);
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px 16px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🐿️</div>
+            <h1>松鼠收藏夹 隐私权政策</h1>
+            <p class="update-date">最后更新日期：2024年12月4日</p>
+        </header>
+
+        <main>
+            <p>感谢您使用「松鼠收藏夹」（以下简称"本扩展"）。我们非常重视您的隐私。本隐私权政策旨在向您说明我们如何收集、使用和保护您的数据。</p>
+
+            <h2>📋 概述</h2>
+            <p><strong>松鼠收藏夹</strong> 是一款浏览器扩展，帮助用户收藏 Twitter/X 和小红书上的内容，并提供 AI 辅助摘要和创作功能。</p>
+
+            <div class="highlight-box success">
+                <h3 style="margin-top: 0; color: var(--success);">核心原则</h3>
+                <ul class="principle-list">
+                    <li>所有数据存储在您的浏览器本地</li>
+                    <li>我们不会收集、上传或共享您的个人数据</li>
+                    <li>AI 功能由您自行配置的第三方 API 提供</li>
+                </ul>
+            </div>
+
+            <h2>🔐 数据收集与存储</h2>
+            
+            <h3>我们收集什么数据？</h3>
+            <p>本扩展<strong>不会主动收集</strong>您的任何个人信息。以下数据仅存储在您的浏览器本地：</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>数据类型</th>
+                        <th>存储位置</th>
+                        <th>用途</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>收藏的内容</td>
+                        <td>浏览器本地存储</td>
+                        <td>显示您的收藏列表</td>
+                    </tr>
+                    <tr>
+                        <td>AI 摘要结果</td>
+                        <td>浏览器本地存储</td>
+                        <td>显示内容摘要</td>
+                    </tr>
+                    <tr>
+                        <td>API 配置（密钥、URL）</td>
+                        <td>浏览器本地存储（加密）</td>
+                        <td>调用您配置的 AI 服务</td>
+                    </tr>
+                    <tr>
+                        <td>用户偏好设置</td>
+                        <td>浏览器本地存储</td>
+                        <td>保存您的设置选项</td>
+                    </tr>
+                    <tr>
+                        <td>向量索引数据</td>
+                        <td>浏览器 IndexedDB</td>
+                        <td>支持语义搜索功能</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>我们不收集什么数据？</h3>
+            <ul class="principle-list no-list">
+                <li>个人身份信息（姓名、邮箱、电话等）</li>
+                <li>浏览历史记录</li>
+                <li>登录凭据</li>
+                <li>设备信息</li>
+                <li>位置数据</li>
+            </ul>
+
+            <h2>🌐 第三方服务</h2>
+
+            <h3>AI 服务调用</h3>
+            <p>本扩展支持用户配置第三方 AI 服务（如 OpenAI、阿里云通义千问等）。当您使用 AI 功能时：</p>
+            <ol>
+                <li><strong>您的数据将直接发送到您配置的 AI 服务提供商</strong></li>
+                <li>本扩展不会代理或存储这些请求</li>
+                <li>请参阅您所使用的 AI 服务提供商的隐私政策</li>
+            </ol>
+
+            <p><strong>常见 AI 服务提供商的隐私政策：</strong></p>
+            <ul>
+                <li><a href="https://openai.com/privacy" target="_blank" rel="noopener">OpenAI 隐私政策</a></li>
+                <li><a href="https://terms.alicdn.com/legal-agreement/terms/suit_bu1_ali_cloud/suit_bu1_ali_cloud202107141244_88498.html" target="_blank" rel="noopener">阿里云隐私政策</a></li>
+            </ul>
+
+            <h3>飞书 API（可选）</h3>
+            <p>如果您启用了飞书同步功能，扩展会与飞书 API 通信。请参阅 <a href="https://www.feishu.cn/privacy" target="_blank" rel="noopener">飞书隐私政策</a>。</p>
+
+            <h2>🔒 数据安全</h2>
+            <p>我们采取以下措施保护您的数据：</p>
+
+            <ul class="security-list">
+                <li><strong>本地存储：</strong>所有数据存储在您的浏览器本地，不上传到任何服务器</li>
+                <li><strong>加密存储：</strong>API 密钥等敏感信息使用浏览器的加密存储机制</li>
+                <li><strong>最小权限：</strong>仅申请必要的浏览器权限</li>
+            </ul>
+
+            <h3>扩展权限说明</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>权限</th>
+                        <th>用途</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>storage</code></td>
+                        <td>在浏览器本地保存收藏内容和设置</td>
+                    </tr>
+                    <tr>
+                        <td><code>sidePanel</code></td>
+                        <td>显示收藏库和创作面板的侧边栏</td>
+                    </tr>
+                    <tr>
+                        <td><code>tabs</code></td>
+                        <td>获取当前标签页信息以支持内容收集</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>👤 用户权利</h2>
+            <p>您对自己的数据拥有完全控制权：</p>
+            <ul>
+                <li><strong>访问：</strong>您可以随时在扩展侧边栏查看所有收藏内容</li>
+                <li><strong>导出：</strong>支持将数据导出为 JSON 或 Markdown 格式</li>
+                <li><strong>删除：</strong>您可以随时删除单条收藏或清空所有数据</li>
+                <li><strong>卸载：</strong>卸载扩展将自动删除所有本地存储的数据</li>
+            </ul>
+
+            <h2>🔄 政策更新</h2>
+            <p>我们可能会不时更新本隐私政策。更新后的政策将在本页面发布，并更新"最后更新日期"。</p>
+            <p>重大变更时，我们会在扩展更新说明中通知您。</p>
+
+            <h2>📧 联系我们</h2>
+            <p>如果您对本隐私政策有任何疑问，请通过以下方式联系我们：</p>
+            <ul>
+                <li><strong>GitHub Issues：</strong><a href="https://github.com/HelloSanshi/squirrel-box/issues" target="_blank" rel="noopener">https://github.com/HelloSanshi/squirrel-box/issues</a></li>
+            </ul>
+
+            <h2>📜 适用法律</h2>
+            <p>本隐私政策受中华人民共和国法律管辖，并按其解释。</p>
+        </main>
+
+        <footer>
+            <p><strong>松鼠收藏夹团队</strong></p>
+            <p>本隐私政策自 2024 年 12 月 4 日起生效。</p>
+            <a href="https://github.com/HelloSanshi/squirrel-box" class="back-link" target="_blank" rel="noopener">
+                🐿️ 返回 GitHub 仓库
+            </a>
+        </footer>
+    </div>
+</body>
+</html>
+

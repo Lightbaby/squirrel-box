@@ -47,7 +47,7 @@
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/Lightbaby/squirrel-box.git
+   git clone https://github.com/HelloSanshi/squirrel-box.git
    cd squirrel-box
    ```
 
@@ -198,9 +198,9 @@ MIT License - 你可以自由使用、修改和分发。
 
 ## 💬 反馈
 
-- 🐛 [提交 Bug](https://github.com/Lightbaby/squirrel-box/issues)
-- 💡 [功能建议](https://github.com/Lightbaby/squirrel-box/issues)
-- ⭐ 觉得有用？给个 [Star](https://github.com/Lightbaby/squirrel-box) 支持一下！
+- 🐛 [提交 Bug](https://github.com/HelloSanshi/squirrel-box/issues)
+- 💡 [功能建议](https://github.com/HelloSanshi/squirrel-box/issues)
+- ⭐ 觉得有用？给个 [Star](https://github.com/HelloSanshi/squirrel-box) 支持一下！
 
 ---
 
