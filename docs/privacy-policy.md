@@ -53,7 +53,6 @@
 
 **常见 AI 服务提供商的隐私政策：**
 - [OpenAI 隐私政策](https://openai.com/privacy)
-- [阿里云隐私政策](https://terms.alicdn.com/legal-agreement/terms/suit_bu1_ali_cloud/suit_bu1_ali_cloud202107141244_88498.html)
 
 ### 飞书 API（可选）
 
@@ -107,10 +106,6 @@
 - **Chrome Web Store**：[松鼠收藏夹](https://chromewebstore.google.com/detail/松鼠收藏夹/ekhbcjiejapjaaihlhhebbclkkhiiile)
 
 ---
-
-## 📜 适用法律
-
-本隐私政策受中华人民共和国法律管辖，并按其解释。
 
 ---
 
